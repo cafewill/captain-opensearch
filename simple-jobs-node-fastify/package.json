@@ -1,0 +1,13 @@
+{
+  "name": "simple-jobs-node-fastify",
+  "version": "0.0.1",
+  "engines": { "node": ">=24" },
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js"
+  },
+  "dependencies": {
+    "dotenv": "^16.4.0",
+    "fastify": "^5.8.5"
+  }
+}

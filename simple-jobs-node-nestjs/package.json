@@ -1,0 +1,24 @@
+{
+  "name": "simple-jobs-node-nestjs",
+  "version": "0.0.1",
+  "engines": { "node": ">=24" },
+  "scripts": {
+    "start": "ts-node src/main.ts",
+    "build": "tsc",
+    "start:prod": "node dist/main.js"
+  },
+  "dependencies": {
+    "@nestjs/common": "^11.1.19",
+    "@nestjs/core": "^11.1.19",
+    "@nestjs/platform-express": "^11.1.19",
+    "@nestjs/schedule": "^5.0.0",
+    "dotenv": "^16.4.0",
+    "reflect-metadata": "^0.2.0",
+    "rxjs": "^7.8.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "ts-node": "^10.9.0",
+    "typescript": "^5.0.0"
+  }
+}

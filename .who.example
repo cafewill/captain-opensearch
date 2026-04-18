@@ -1,0 +1,5 @@
+# 본 파일을 복사하여 .who 로 저장 후 본인 LABEL 을 입력하세요.
+# cp .who.example .who
+# .who 파일은 절대 커밋하지 않습니다. (.gitignore 등록됨)
+# ⚠️  LABEL 은 영문 소문자 및 숫자만 허용 (특수문자, 한글, 대문자 불가)
+LABEL=yournameorpurpose

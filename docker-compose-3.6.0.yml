@@ -1,0 +1,46 @@
+services:
+
+  opensearch360:
+    image: opensearchproject/opensearch:3.6.0
+    container_name: opensearch360
+    environment:
+      - discovery.type=single-node
+      - OPENSEARCH_INITIAL_ADMIN_PASSWORD=Demo3543##
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+      nofile:
+        soft: 65536
+        hard: 65536
+    ports:
+      - "9200:9200"
+    volumes:
+      - opensearch360-data:/usr/share/opensearch/data
+    networks:
+      - opensearch360-net
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sk https://localhost:9200/_cluster/health -u admin:Demo3543## | grep -q 'yellow\\|green'"]
+      interval: 15s
+      timeout: 10s
+      retries: 10
+
+  opensearch-dashboards360:
+    image: opensearchproject/opensearch-dashboards:3.6.0
+    container_name: opensearch-dashboards360
+    volumes:
+      - ./opensearch-dashboards-3.6.0.yml:/usr/share/opensearch-dashboards/config/opensearch_dashboards.yml
+    ports:
+      - "5601:5601"
+    networks:
+      - opensearch360-net
+    depends_on:
+      opensearch360:
+        condition: service_healthy
+
+volumes:
+  opensearch360-data:
+
+networks:
+  opensearch360-net:
+    driver: bridge

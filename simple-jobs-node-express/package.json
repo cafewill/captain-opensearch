@@ -1,0 +1,13 @@
+{
+  "name": "simple-jobs-node-express",
+  "version": "0.0.1",
+  "engines": { "node": ">=24" },
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js"
+  },
+  "dependencies": {
+    "dotenv": "^16.4.0",
+    "express": "^4.19.0"
+  }
+}

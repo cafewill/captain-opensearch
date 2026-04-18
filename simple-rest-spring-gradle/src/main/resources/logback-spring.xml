@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+
+    <springProperty scope="context" name="OPENSEARCH_ENV"            source="opensearch.env"                          defaultValue="local"/>
+    <springProperty scope="context" name="OPENSEARCH_NAME"           source="opensearch.name"                         defaultValue="app"/>
+    <springProperty scope="context" name="OPENSEARCH_SCHEME"         source="opensearch.scheme"                       defaultValue="https"/>
+    <springProperty scope="context" name="OPENSEARCH_HOST"           source="opensearch.host"                         defaultValue="localhost"/>
+    <springProperty scope="context" name="OPENSEARCH_PORT"           source="opensearch.port"                         defaultValue="9200"/>
+    <springProperty scope="context" name="OPENSEARCH_USER"           source="opensearch.username"                     defaultValue=""/>
+    <springProperty scope="context" name="OPENSEARCH_PASS"           source="opensearch.password"                     defaultValue=""/>
+    <springProperty scope="context" name="OPENSEARCH_MAX_BYTES"      source="opensearch.batch.max-bytes"              defaultValue="1000000"/>
+    <springProperty scope="context" name="OPENSEARCH_FLUSH_INTERVAL" source="opensearch.batch.flush-interval-seconds" defaultValue="1"/>
+    <springProperty scope="context" name="OPENSEARCH_QUEUE_SIZE"     source="opensearch.batch.queue-size"             defaultValue="8192"/>
+
+    <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder>
+            <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n</pattern>
+            <charset>UTF-8</charset>
+        </encoder>
+    </appender>
+
+    <appender name="FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+            <fileNamePattern>log/%d{yyyyMMddHH}-${OPENSEARCH_NAME}.log</fileNamePattern>
+            <maxHistory>168</maxHistory>
+        </rollingPolicy>
+        <encoder>
+            <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n</pattern>
+            <charset>UTF-8</charset>
+        </encoder>
+    </appender>
+
+    <appender name="OPENSEARCH" class="com.cube.simple.config.OpenSearchWebAppender">
+        <url>${OPENSEARCH_SCHEME}://${OPENSEARCH_HOST}:${OPENSEARCH_PORT}/_bulk</url>
+        <index>logs-${OPENSEARCH_NAME}-%date{yyyy.MM.dd}</index>
+        <username>${OPENSEARCH_USER}</username>
+        <password>${OPENSEARCH_PASS}</password>
+        <app>${OPENSEARCH_NAME}</app>
+        <env>${OPENSEARCH_ENV}</env>
+        <maxBatchBytes>${OPENSEARCH_MAX_BYTES}</maxBatchBytes>
+        <flushIntervalSeconds>${OPENSEARCH_FLUSH_INTERVAL}</flushIntervalSeconds>
+        <queueSize>${OPENSEARCH_QUEUE_SIZE}</queueSize>
+    </appender>
+
+    <root level="INFO">
+        <appender-ref ref="CONSOLE"/>
+        <appender-ref ref="FILE"/>
+        <appender-ref ref="OPENSEARCH"/>
+    </root>
+
+</configuration>

@@ -1,0 +1,171 @@
+# ────────────────────────────────────────────────────────────────────────────
+# Spring Boot
+# ────────────────────────────────────────────────────────────────────────────
+target/
+bin/
+build/
+!**/src/main/**/build/
+!**/src/test/**/build/
+*.class
+*.jar
+*.war
+*.ear
+*.nar
+hs_err_pid*
+replay_pid*
+
+# Maven wrapper cache
+.mvn/wrapper/maven-wrapper.jar
+
+# Gradle wrapper cache
+.gradle/
+!gradle/wrapper/gradle-wrapper.jar
+
+# Spring Boot log files
+log/
+logs/
+*.log
+*.log.*
+
+# STS / Eclipse
+.apt_generated
+.classpath
+.factorypath
+.project
+.settings/
+.springBeans
+.sts4-cache/
+
+# IntelliJ IDEA
+.idea/
+*.iws
+*.iml
+*.ipr
+out/
+
+# VS Code (Java)
+.vscode/
+.flattened-pom.xml
+
+# ────────────────────────────────────────────────────────────────────────────
+# Node.js
+# ────────────────────────────────────────────────────────────────────────────
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+
+# Next.js
+.next/
+out/
+.vercel
+
+# NestJS
+dist/
+
+# Runtime
+pids
+*.pid
+*.seed
+*.pid.lock
+
+# ────────────────────────────────────────────────────────────────────────────
+# Python
+# ────────────────────────────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.pyd
+
+# 가상환경
+venv/
+.venv/
+env/
+.env/
+ENV/
+
+# 배포/빌드 산출물
+*.egg
+*.egg-info/
+dist/
+build/
+.eggs/
+wheels/
+
+# pytest / coverage
+.pytest_cache/
+.coverage
+.coverage.*
+coverage.xml
+htmlcov/
+.tox/
+.nox/
+
+# mypy / pyright
+.mypy_cache/
+.dmypy.json
+dmypy.json
+.pyright/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# ────────────────────────────────────────────────────────────────────────────
+# 작업자 로컬 설정
+# ────────────────────────────────────────────────────────────────────────────
+.who
+
+# ────────────────────────────────────────────────────────────────────────────
+# 환경 변수 / 시크릿
+# ────────────────────────────────────────────────────────────────────────────
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.jks
+
+# ────────────────────────────────────────────────────────────────────────────
+# AI 도구 로컬 설정 (Claude, ChatGPT, Gemini, Qwen 등)
+# ────────────────────────────────────────────────────────────────────────────
+.claude/
+.cursor/
+.aider*
+.chatgpt/
+.gemini/
+.qwen/
+.copilot/
+.codeium/
+.tabnine/
+.continue/
+
+# ────────────────────────────────────────────────────────────────────────────
+# OS / 에디터
+# ────────────────────────────────────────────────────────────────────────────
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# Linux
+*~
+
+# ────────────────────────────────────────────────────────────────────────────
+# Docker
+# ────────────────────────────────────────────────────────────────────────────
+# 로컬 Docker 볼륨 데이터 (실수로 커밋 방지)
+opensearch*-data/
