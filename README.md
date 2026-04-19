@@ -56,12 +56,76 @@ cp .env-example .env
 |---|---|---|---|
 | `simple-lib-spring-opensearch-appender` | `com.cube` | `simple-lib-spring-opensearch-appender` | `1.0.0` |
 
-Spring Boot 배치잡/REST API 앱이 공통으로 사용하는 OpenSearch Appender 라이브러리.
-`mavenLocal()` 에 설치 후 각 앱 의존성으로 참조한다.
+Spring Boot 배치잡/REST API 앱이 공통으로 사용하는 OpenSearch Appender 라이브러리.  
+Maven Central 에 배포되지 않으므로 **개발자 로컬 `.m2` 저장소에 직접 설치**해야 한다.  
+설치 후 각 Spring Boot 앱이 일반 Maven/Gradle 의존성처럼 참조한다.
+
+#### 설치 방법
+
+```bash
+# 1. 라이브러리 디렉터리로 이동
+cd simple-lib-spring-opensearch-appender
+
+# 2. Maven Wrapper 로 빌드 & 로컬 .m2 설치
+#    (mvn 이 전역 설치되어 있으면 mvn install -q 로 대체 가능)
+../simple-jobs-spring-maven/mvnw install -q
+```
+
+> **Maven Wrapper(`mvnw`)를 쓰는 이유**  
+> 이 라이브러리 자체는 `mvnw`를 가지고 있지 않다.  
+> 인접한 `simple-jobs-spring-maven/mvnw` 를 빌려 실행하면 별도 Maven 설치 없이 동작한다.
+
+#### 설치 확인
+
+```bash
+ls ~/.m2/repository/com/cube/simple-lib-spring-opensearch-appender/1.0.0/
+# 아래 두 파일이 있으면 정상
+# simple-lib-spring-opensearch-appender-1.0.0.jar
+# simple-lib-spring-opensearch-appender-1.0.0.pom
+```
+
+#### 소비 앱 의존성 선언
+
+설치 후 각 Spring Boot 앱에서 아래와 같이 참조한다.
+
+**Maven (`pom.xml`)**
+```xml
+<dependency>
+    <groupId>com.cube</groupId>
+    <artifactId>simple-lib-spring-opensearch-appender</artifactId>
+    <version>1.0.0</version>
+</dependency>
+```
+
+**Gradle (`build.gradle`)**
+```gradle
+repositories {
+    mavenLocal()        // 로컬 .m2 를 먼저 탐색
+    mavenCentral()
+}
+
+dependencies {
+    implementation 'com.cube:simple-lib-spring-opensearch-appender:1.0.0'
+}
+```
+
+> **`mavenLocal()` 이 필요한 이유**  
+> Gradle 은 기본적으로 로컬 `.m2` 를 탐색하지 않는다.  
+> `repositories` 블록에 `mavenLocal()` 이 없으면 로컬 설치된 JAR 를 찾지 못해 빌드가 실패한다.
+
+#### 재설치가 필요한 경우
+
+라이브러리 소스를 수정한 경우 반드시 재설치 후 소비 앱을 다시 빌드해야 한다.
 
 ```bash
 cd simple-lib-spring-opensearch-appender
-../simple-jobs-spring-maven/mvnw install -q
+../simple-jobs-spring-maven/mvnw install -q   # 재설치
+
+# 이후 각 소비 앱 재빌드
+cd ../simple-jobs-spring-maven  && ./mvnw package -q -DskipTests
+cd ../simple-jobs-spring-gradle && ./gradlew build -x test -q
+cd ../simple-rest-spring-maven  && ./mvnw package -q -DskipTests
+cd ../simple-rest-spring-gradle && ./gradlew build -x test -q
 ```
 
 ---
