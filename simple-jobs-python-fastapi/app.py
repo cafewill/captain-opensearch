@@ -6,7 +6,7 @@ from contextlib import asynccontextmanager
 
 from dotenv import load_dotenv
 from fastapi import FastAPI
-from opensearch_job_appender import OpenSearchJobAppender
+from opensearch_appender.job_appender import OpenSearchJobAppender
 
 load_dotenv()
 

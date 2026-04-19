@@ -1,12 +1,3 @@
-"""
-OpenSearch _bulk API 어펜더 — Python 표준 라이브러리만 사용 (추가 의존성 없음)
-
-다른 프로젝트 반영 시 이 파일 하나만 복사
-  1. 프로젝트 루트에 복사
-  2. .env 에 OPENSEARCH_* 환경변수 추가
-  3. from opensearch_appender import OpenSearchAppender 후 인스턴스 생성
-"""
-
 import atexit
 import base64
 import json
@@ -16,13 +7,14 @@ import socket
 import ssl
 import threading
 import time
+import uuid
 import urllib.request
 from datetime import datetime, timezone, timedelta
 
 KST = timezone(timedelta(hours=9), 'KST')
 
 
-class OpenSearchJobAppender:
+class OpenSearchWebAppender:
     def __init__(
         self,
         scheme='https',
@@ -52,9 +44,7 @@ class OpenSearchJobAppender:
         self._ssl_ctx.check_hostname   = False
         self._ssl_ctx.verify_mode      = ssl.CERT_NONE
         self._running = True
-        self._thread  = threading.Thread(
-            target=self._run, args=(flush_interval_seconds,), daemon=True
-        )
+        self._thread  = threading.Thread(target=self._run, args=(flush_interval_seconds,), daemon=True)
         self._thread.start()
         atexit.register(self.stop)  # 프로세스 종료 시 미전송 로그 플러시
 
@@ -76,6 +66,29 @@ class OpenSearchJobAppender:
             self._queue.put_nowait((f'{self._index}-{today}', doc))
         except queue.Full:
             pass
+
+    def before_request(self, request):
+        """FastAPI/Starlette before_request 훅에서 호출 — trace_id, start_time 주입"""
+        request.state.trace_id   = request.headers.get('X-Request-ID') or str(uuid.uuid4())
+        request.state.start_time = time.time()
+
+    def after_request(self, request, response):
+        """FastAPI/Starlette after_request 훅에서 호출 — 접근 로그 기록"""
+        duration_ms = int((time.time() - request.state.start_time) * 1000)
+        ts = datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')[:-3]
+        print(f'[{ts}] {request.method} {request.url.path} → {response.status_code} ({duration_ms}ms) [{request.state.trace_id}]', flush=True)
+        self.log(
+            'INFO',
+            f'{request.method} {request.url.path} → {response.status_code}',
+            trace_id    = request.state.trace_id,
+            http_method = request.method,
+            http_path   = request.url.path,
+            client_ip   = request.client.host if request.client else '',
+            http_status = response.status_code,
+            duration_ms = duration_ms,
+        )
+        response.headers['X-Request-ID'] = request.state.trace_id
+        return response
 
     def stop(self):
         self._running = False

@@ -128,6 +128,62 @@ cd ../simple-rest-spring-maven  && ./mvnw package -q -DskipTests
 cd ../simple-rest-spring-gradle && ./gradlew build -x test -q
 ```
 
+### 1-0-1. 공용 라이브러리 (Python 전용)
+
+| 디렉터리 | 패키지명 | version |
+|---|---|---|
+| `simple-lib-python-opensearch-appender` | `opensearch-appender` | `1.0.0` |
+
+Python 배치잡/REST API 앱이 공통으로 사용하는 OpenSearch Appender 라이브러리.  
+PyPI에 배포되지 않으므로 **개발자 로컬 환경에 직접 설치**해야 한다.  
+설치 후 각 Python 앱이 일반 패키지처럼 `import` 할 수 있다.
+
+#### 설치 방법
+
+```bash
+# 프로젝트 루트 디렉터리에서 실행
+pip install -e simple-lib-python-opensearch-appender
+```
+
+> **`-e` (editable) 옵션을 쓰는 이유**  
+> 소스를 직접 참조하므로 라이브러리 수정 후 재설치 없이 즉시 반영된다.
+
+#### 설치 확인
+
+```bash
+pip show opensearch-appender
+# Name: opensearch-appender 가 출력되면 정상
+```
+
+#### 소비 앱 import 선언
+
+설치 후 각 Python 앱에서 아래와 같이 참조한다.
+
+**Job Appender (Flask / FastAPI 공통)**
+```python
+from opensearch_appender.job_appender import OpenSearchJobAppender
+```
+
+**Web Appender (Flask)**
+```python
+from opensearch_appender.web_appender_flask import OpenSearchWebAppender
+```
+
+**Web Appender (FastAPI)**
+```python
+from opensearch_appender.web_appender_fastapi import OpenSearchWebAppender
+```
+
+#### 재설치가 필요한 경우
+
+`-e` 옵션으로 설치된 경우 소스 수정 시 재설치가 필요 없다.  
+최초 설치 이후에는 라이브러리 소스 수정 후 바로 실행 가능하다.
+
+```bash
+# 가상환경이 바뀌거나 처음 환경 구성 시에만 재실행
+pip install -e simple-lib-python-opensearch-appender
+```
+
 ---
 
 ### 1-1. 프런트 앱
