@@ -5,7 +5,7 @@
     <modelVersion>4.0.0</modelVersion>
 
     <groupId>com.cube</groupId>
-    <artifactId>simple-opensearch-appender</artifactId>
+    <artifactId>simple-lib-spring-opensearch-appender</artifactId>
     <version>1.0.0</version>
     <packaging>jar</packaging>
     <description>OpenSearch _bulk API appender library — Job / Web 어펜더 + Spring Boot AutoConfiguration</description>

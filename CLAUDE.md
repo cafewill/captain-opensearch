@@ -151,6 +151,9 @@ docker-compose-3.3.0.yml                           ← OpenSearch 3.3.0 + Dashbo
 opensearch-dashboards-3.6.0.yml                    ← Dashboards 설정 (3.6.0)
 opensearch-dashboards-3.3.0.yml                    ← Dashboards 설정 (3.3.0)
 
+# 공용 라이브러리
+simple-lib-spring-opensearch-appender/             ← Spring Boot 공용 OpenSearch Appender 라이브러리 (com.cube:1.0.0)
+
 # 배치잡 앱
 simple-jobs-spring-maven/                          ← Spring Boot 3.5 + Maven
 simple-jobs-spring-gradle/                         ← Spring Boot 3.5 + Gradle
@@ -205,9 +208,11 @@ cp .env-example .env
 
 ## 🔄 작업 흐름 (삼순이 ↔ 오빠)
 ```
-1. 삼순이: feature 브랜치 생성 → 작업 → 커밋 & 푸시
-2. 오빠:   변경 내용 정상 여부 확인
-3. 오빠:   GitHub에서 직접 PR 생성 & 머지
+1. 삼순이: feature 브랜치 생성 → 작업
+2. 오빠:   작업 내용 정상 여부 확인
+3. 삼순이: 작업 내용 커밋 & 푸시
+4. 오빠:   GitHub에서 직접 PR 생성 & 머지
+5. 삼순이: 머지 정상 여부 확인
 ```
 
 ⚠️ 삼순이는 커밋 & 푸시까지만 진행한다. PR 생성 및 머지는 오빠가 직접 수행한다.
@@ -231,15 +236,13 @@ cp .env-example .env
 | `simple-jobs-node-nestjs/src/opensearch.job-appender.ts` | Node.js / NestJS | Job |
 | `simple-jobs-python-flask/opensearch_job_appender.py` | Python / Flask | Job |
 | `simple-jobs-python-fastapi/opensearch_job_appender.py` | Python / FastAPI | Job |
-| `simple-jobs-spring-maven/src/main/java/.../config/OpenSearchJobAppender.java` | Spring Boot | Job |
-| `simple-jobs-spring-gradle/src/main/java/.../config/OpenSearchJobAppender.java` | Spring Boot | Job |
+| `simple-lib-spring-opensearch-appender/src/main/java/com/cube/opensearch/OpenSearchJobAppender.java` | Spring Boot | Job |
 | `simple-rest-node-express/src/opensearch-web-appender.js` | Node.js / Express | Web |
 | `simple-rest-node-fastify/src/opensearch-web-appender.js` | Node.js / Fastify | Web |
 | `simple-rest-node-nestjs/src/opensearch.web-appender.ts` | Node.js / NestJS | Web |
 | `simple-rest-python-flask/opensearch_web_appender.py` | Python / Flask | Web |
 | `simple-rest-python-fastapi/opensearch_web_appender.py` | Python / FastAPI | Web |
-| `simple-rest-spring-maven/src/main/java/.../config/OpenSearchWebAppender.java` | Spring Boot | Web |
-| `simple-rest-spring-gradle/src/main/java/.../config/OpenSearchWebAppender.java` | Spring Boot | Web |
+| `simple-lib-spring-opensearch-appender/src/main/java/com/cube/opensearch/OpenSearchWebAppender.java` | Spring Boot | Web |
 | `simple-page-react-nextjs/lib/opensearch-web-appender.js` | React / Next.js | Web |
 
 ### 변경 유형별 체크리스트
