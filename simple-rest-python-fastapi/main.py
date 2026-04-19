@@ -1,9 +1,6 @@
 import os
 import signal
 import sys
-import time
-import uuid
-from datetime import datetime
 from contextlib import asynccontextmanager
 from typing import Optional
 
@@ -43,27 +40,9 @@ application = FastAPI(lifespan=lifespan)
 
 @application.middleware('http')
 async def access_log_middleware(request: Request, call_next):
-    trace_id = request.headers.get('X-Request-ID') or str(uuid.uuid4())
-    request.state.trace_id  = trace_id
-    request.state.start_time = time.time()
-
+    appender.before_request(request)
     response = await call_next(request)
-
-    duration_ms = int((time.time() - request.state.start_time) * 1000)
-    ts = datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')[:-3]
-    print(f'[{ts}] {request.method} {request.url.path} → {response.status_code} ({duration_ms}ms) [{trace_id}]', flush=True)
-    appender.log(
-        'INFO',
-        f'{request.method} {request.url.path} → {response.status_code}',
-        trace_id    = trace_id,
-        http_method = request.method,
-        http_path   = request.url.path,
-        client_ip   = request.client.host if request.client else '',
-        http_status = response.status_code,
-        duration_ms = duration_ms,
-    )
-    response.headers['X-Request-ID'] = trace_id
-    return response
+    return appender.after_request(request, response)
 
 
 # ── DTO ───────────────────────────────────────────────────────────────────────
