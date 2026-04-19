@@ -83,6 +83,8 @@ public class OpenSearchWebAppender extends UnsynchronizedAppenderBase<ILoggingEv
         DateTimeFormatter.ISO_OFFSET_DATE_TIME.withZone(ZoneId.of("Asia/Seoul"));
 
     private static final Set<String> NUMERIC_MDC_FIELDS = Set.of("http_status", "duration_ms");
+    // toBulkLine() 에서 고정 필드로 이미 추가되는 키 — MDC 루프에서 중복 방지
+    private static final Set<String> FIXED_DOC_FIELDS  = Set.of("app", "env", "instance_id");
 
     @Override
     public void start() {
@@ -191,6 +193,7 @@ public class OpenSearchWebAppender extends UnsynchronizedAppenderBase<ILoggingEv
         if (mdc != null && !mdc.isEmpty()) {
             for (Map.Entry<String, String> entry : mdc.entrySet()) {
                 String k = entry.getKey();
+                if (FIXED_DOC_FIELDS.contains(k)) continue;
                 String v = entry.getValue();
                 doc.append(",\"").append(esc(k)).append("\":");
                 if (NUMERIC_MDC_FIELDS.contains(k) && isNumeric(v)) {
@@ -259,12 +262,18 @@ public class OpenSearchWebAppender extends UnsynchronizedAppenderBase<ILoggingEv
             try (OutputStream os = conn.getOutputStream()) { os.write(bytes); }
 
             int status = conn.getResponseCode();
-            if (status >= 400) {
-                addWarn("OpenSearch _bulk HTTP " + status);
-            }
-            // Always drain response body — prevents dirty pooled connections on next send
+            // Always read response body — prevents dirty pooled connections on next send
             try (InputStream is = status >= 400 ? conn.getErrorStream() : conn.getInputStream()) {
-                if (is != null) is.transferTo(OutputStream.nullOutputStream());
+                if (is != null) {
+                    String respBody = new String(is.readAllBytes(), StandardCharsets.UTF_8);
+                    if (status >= 400) {
+                        addWarn("OpenSearch _bulk HTTP " + status + ": " +
+                                respBody.substring(0, Math.min(500, respBody.length())));
+                    } else if (respBody.contains("\"errors\":true")) {
+                        addWarn("OpenSearch _bulk partial errors: " +
+                                respBody.substring(0, Math.min(500, respBody.length())));
+                    }
+                }
             }
             conn.disconnect();
         } catch (Exception e) {
