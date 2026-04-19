@@ -85,14 +85,17 @@ class OpenSearchJobAppender {
     let bulk = '';
     let batchItems = [];
     for (const item of items) {
-      bulk += JSON.stringify({ index: { _index: item.index } }) + '\n';
-      bulk += JSON.stringify(item.doc) + '\n';
-      batchItems.push(item);
-      if (Buffer.byteLength(bulk) >= this._maxBytes) {
+      const meta    = JSON.stringify({ index: { _index: item.index } }) + '\n';
+      const docLine = JSON.stringify(item.doc) + '\n';
+      const addition = Buffer.byteLength(meta + docLine);
+      // 추가 전 초과 여부 확인 — 배치에 내용이 있을 때만 먼저 전송
+      if (bulk && Buffer.byteLength(bulk) + addition > this._maxBytes) {
         this._send(bulk, batchItems);
         bulk = '';
         batchItems = [];
       }
+      bulk += meta + docLine;
+      batchItems.push(item);
     }
     if (bulk) this._send(bulk, batchItems);
   }
