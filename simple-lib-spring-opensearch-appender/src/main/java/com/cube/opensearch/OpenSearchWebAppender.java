@@ -37,7 +37,7 @@ import java.util.concurrent.TimeUnit;
  * 추가 의존성 없이 JDK + logback-classic 만으로 구현한 OpenSearch 어펜더. (Web/REST API 서비스용)
  *
  * [라이브러리 사용 시]
- *   1. pom.xml / build.gradle 에 simple-opensearch-appender 의존성 추가
+ *   1. pom.xml / build.gradle 에 simple-lib-spring-opensearch-appender 의존성 추가
  *   2. logback-spring.xml 에 appender class="com.cube.opensearch.OpenSearchWebAppender" 추가
  *   3. application.properties 에 opensearch.* 프로퍼티 추가
  *   → MdcWebFilter 는 OpenSearchWebAutoConfiguration 이 자동 등록 (별도 설정 불필요)

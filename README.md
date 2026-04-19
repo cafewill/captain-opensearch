@@ -50,6 +50,22 @@ cp .env-example .env
 
 ## 1. 앱 목록 및 빌드·실행 방법
 
+### 1-0. 공용 라이브러리 (Spring Boot 전용)
+
+| 디렉터리 | groupId | artifactId | version |
+|---|---|---|---|
+| `simple-lib-spring-opensearch-appender` | `com.cube` | `simple-lib-spring-opensearch-appender` | `1.0.0` |
+
+Spring Boot 배치잡/REST API 앱이 공통으로 사용하는 OpenSearch Appender 라이브러리.
+`mavenLocal()` 에 설치 후 각 앱 의존성으로 참조한다.
+
+```bash
+cd simple-lib-spring-opensearch-appender
+../simple-jobs-spring-maven/mvnw install -q
+```
+
+---
+
 ### 1-1. 프런트 앱
 
 | 디렉터리 | 기술 스택 | 포트 | 설명 |
