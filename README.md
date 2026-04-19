@@ -128,6 +128,55 @@ cd ../simple-rest-spring-maven  && ./mvnw package -q -DskipTests
 cd ../simple-rest-spring-gradle && ./gradlew build -x test -q
 ```
 
+### 1-0-1. 공용 라이브러리 (Python 전용)
+
+| 디렉터리 | 패키지명 | version |
+|---|---|---|
+| `simple-lib-python-opensearch-appender` | `opensearch-appender` | `1.0.0` |
+
+Python 배치잡/REST API 앱이 공통으로 사용하는 OpenSearch Appender 라이브러리.  
+PyPI에 배포되지 않으므로 **개발자 로컬 환경에 직접 설치**해야 한다.  
+설치 후 각 Python 앱이 일반 패키지처럼 `import` 할 수 있다.
+
+#### 설치 방법
+
+각 소비 앱의 `requirements.txt` 에 `../simple-lib-python-opensearch-appender` 가 포함되어 있으므로  
+**별도 설치 없이** 앱 디렉터리에서 `pip install -r requirements.txt` 하나로 완결된다.
+
+```bash
+# 예: simple-rest-python-flask 기준
+cd simple-rest-python-flask
+python -m venv venv && source venv/bin/activate
+pip install -r requirements.txt   # 라이브러리 포함 전체 설치
+python main.py
+```
+
+#### 소비 앱 import 선언
+
+**Job Appender (Flask / FastAPI 공통)**
+```python
+from opensearch_appender.job_appender import OpenSearchJobAppender
+```
+
+**Web Appender (Flask)**
+```python
+from opensearch_appender.web_appender_flask import OpenSearchWebAppender
+```
+
+**Web Appender (FastAPI)**
+```python
+from opensearch_appender.web_appender_fastapi import OpenSearchWebAppender
+```
+
+#### 라이브러리 소스 수정 후 재설치가 필요한 경우
+
+`requirements.txt` 경로 방식은 수정 시 재설치가 필요하다.
+
+```bash
+# 각 소비 앱 가상환경에서 재설치
+pip install --force-reinstall ../simple-lib-python-opensearch-appender
+```
+
 ---
 
 ### 1-1. 프런트 앱
@@ -196,14 +245,14 @@ npm install && npm run start:dev
 # Flask + APScheduler
 cd simple-jobs-python-flask
 python -m venv venv && source venv/bin/activate   # Windows: venv\Scripts\activate
-pip install -r requirements.txt
-python app.py
+pip install -r requirements.txt                   # ../simple-lib-python-opensearch-appender 포함
+python main.py
 
 # FastAPI + APScheduler
 cd simple-jobs-python-fastapi
 python -m venv venv && source venv/bin/activate
 pip install -r requirements.txt
-python app.py
+python main.py
 ```
 
 ---
@@ -254,14 +303,14 @@ npm install && npm start
 # Flask / waitress (포트 5201)
 cd simple-rest-python-flask
 python -m venv venv && source venv/bin/activate
-pip install -r requirements.txt
-python app.py
+pip install -r requirements.txt                   # ../simple-lib-python-opensearch-appender 포함
+python main.py
 
 # FastAPI / uvicorn (포트 5202)
 cd simple-rest-python-fastapi
 python -m venv venv && source venv/bin/activate
 pip install -r requirements.txt
-python app.py
+python main.py
 ```
 
 ---
@@ -275,12 +324,13 @@ python app.py
 
 | 앱 유형 | 기술 스택 | Appender 파일 |
 |---|---|---|
-| 배치잡 | Spring Boot | `src/main/java/.../config/OpenSearchJobAppender.java` |
-| REST API | Spring Boot | `src/main/java/.../config/OpenSearchWebAppender.java` |
+| 배치잡 | Spring Boot | `simple-lib-spring-opensearch-appender/.../OpenSearchJobAppender.java` |
+| REST API | Spring Boot | `simple-lib-spring-opensearch-appender/.../OpenSearchWebAppender.java` |
 | 배치잡 | Node.js | `src/opensearch-job-appender.js` (또는 `.ts`) |
 | REST API | Node.js | `src/opensearch-web-appender.js` (또는 `.ts`) |
-| 배치잡 | Python | `opensearch_job_appender.py` |
-| REST API | Python | `opensearch_web_appender.py` |
+| 배치잡 | Python | `simple-lib-python-opensearch-appender/opensearch_appender/job_appender.py` |
+| REST API (Flask) | Python | `simple-lib-python-opensearch-appender/opensearch_appender/web_appender_flask.py` |
+| REST API (FastAPI) | Python | `simple-lib-python-opensearch-appender/opensearch_appender/web_appender_fastapi.py` |
 
 ### 2-2. JobAppender vs WebAppender 차이
 
@@ -293,13 +343,33 @@ python app.py
 
 ### 2-3. Spring Boot — 설정 방법
 
-**① `OpenSearchJobAppender.java` / `OpenSearchWebAppender.java` 복사**
+**① `simple-lib-spring-opensearch-appender` 로컬 설치 (최초 1회)**
 
-```
-src/main/java/{base-package}/config/ 에 복사 후 패키지 선언만 수정
+```bash
+cd simple-lib-spring-opensearch-appender
+../simple-jobs-spring-maven/mvnw install -q
 ```
 
-**② `logback-spring.xml` — OPENSEARCH Appender 등록**
+**② 소비 앱 의존성 추가**
+
+Maven (`pom.xml`)
+```xml
+<dependency>
+    <groupId>com.cube</groupId>
+    <artifactId>simple-lib-spring-opensearch-appender</artifactId>
+    <version>1.0.0</version>
+</dependency>
+```
+
+Gradle (`build.gradle`)
+```gradle
+repositories { mavenLocal(); mavenCentral() }
+dependencies {
+    implementation 'com.cube:simple-lib-spring-opensearch-appender:1.0.0'
+}
+```
+
+**③ `logback-spring.xml` — OPENSEARCH Appender 등록**
 
 ```xml
 <springProperty scope="context" name="OPENSEARCH_SCHEME" source="opensearch.scheme" defaultValue="https"/>
@@ -311,7 +381,7 @@ src/main/java/{base-package}/config/ 에 복사 후 패키지 선언만 수정
 <springProperty scope="context" name="OPENSEARCH_ENV"    source="opensearch.env"    defaultValue="local"/>
 
 <!-- 배치잡용 -->
-<appender name="OPENSEARCH" class="{package}.config.OpenSearchJobAppender">
+<appender name="OPENSEARCH" class="com.cube.opensearch.OpenSearchJobAppender">
     <url>${OPENSEARCH_SCHEME}://${OPENSEARCH_HOST}:${OPENSEARCH_PORT}/_bulk</url>
     <index>logs-${OPENSEARCH_NAME}-%date{yyyy.MM.dd}</index>
     <username>${OPENSEARCH_USER}</username>
@@ -321,6 +391,9 @@ src/main/java/{base-package}/config/ 에 복사 후 패키지 선언만 수정
 </appender>
 
 <!-- REST API용 (위와 동일, class만 OpenSearchWebAppender로 변경) -->
+<appender name="OPENSEARCH" class="com.cube.opensearch.OpenSearchWebAppender">
+    ...
+</appender>
 
 <root level="INFO">
     <appender-ref ref="CONSOLE"/>
@@ -462,7 +535,18 @@ export class OpenSearchWebAppender {
 
 ### 2-5. Python — 설정 방법
 
-**.env**
+**① `simple-lib-python-opensearch-appender` 설치 (최초 1회)**
+
+```bash
+# 앱 디렉터리에서 실행 (requirements.txt에 경로 포함되어 있으므로 한 번에 설치됨)
+cd simple-rest-python-flask
+pip install -r requirements.txt
+```
+
+> `requirements.txt` 에 `../simple-lib-python-opensearch-appender` 가 포함되어 있어  
+> 별도 설치 없이 `pip install -r requirements.txt` 하나로 완결된다.
+
+**② `.env`**
 
 ```dotenv
 OPENSEARCH_SCHEME=https
@@ -472,14 +556,33 @@ OPENSEARCH_USERNAME=admin
 OPENSEARCH_PASSWORD=Demo3543##
 ```
 
-**사용 예시 (Flask)**
+**③ 사용 예시 (Flask — Job)**
 
 ```python
-from opensearch_web_appender import OpenSearchWebAppender
-from dotenv import load_dotenv
+# main.py
+from opensearch_appender.job_appender import OpenSearchJobAppender
 import os
 
-load_dotenv()
+appender = OpenSearchJobAppender(
+    scheme   = os.getenv('OPENSEARCH_SCHEME',   'https'),
+    host     = os.getenv('OPENSEARCH_HOST',     'localhost'),
+    port     = int(os.getenv('OPENSEARCH_PORT', '9200')),
+    username = os.getenv('OPENSEARCH_USERNAME', ''),
+    password = os.getenv('OPENSEARCH_PASSWORD', ''),
+    app      = 'simple-jobs-python-flask',
+    env      = 'local',
+)
+
+appender.log('INFO', '배치잡 실행', job='system-job')
+```
+
+**③ 사용 예시 (Flask — Web)**
+
+```python
+# main.py
+from opensearch_appender.web_appender_flask import OpenSearchWebAppender
+import os
+
 appender = OpenSearchWebAppender(
     scheme   = os.getenv('OPENSEARCH_SCHEME',   'https'),
     host     = os.getenv('OPENSEARCH_HOST',     'localhost'),
@@ -499,10 +602,26 @@ def after(response):
     return appender.after_request(request, response)
 ```
 
+**③ 사용 예시 (FastAPI — Web)**
+
+```python
+# main.py
+from opensearch_appender.web_appender_fastapi import OpenSearchWebAppender
+import os
+
+appender = OpenSearchWebAppender(...)
+
+@application.middleware('http')
+async def access_log_middleware(request: Request, call_next):
+    appender.before_request(request)
+    response = await call_next(request)
+    return appender.after_request(request, response)
+```
+
 **Flask 프로덕션 서버 (waitress)**
 
 ```python
-# app.py — Flask dev server 경고 제거
+# main.py — Flask dev server 경고 제거
 from waitress import serve
 serve(app, host='0.0.0.0', port=5201)
 ```

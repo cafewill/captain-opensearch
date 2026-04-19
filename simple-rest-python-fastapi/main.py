@@ -14,7 +14,7 @@ from fastapi import FastAPI, Request, Response, HTTPException
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 import db
-from opensearch_web_appender import OpenSearchWebAppender
+from opensearch_appender.web_appender_fastapi import OpenSearchWebAppender
 
 appender = OpenSearchWebAppender(
     scheme                = os.environ.get('OPENSEARCH_SCHEME',   'https'),

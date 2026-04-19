@@ -7,7 +7,7 @@ from functools import wraps
 from dotenv import load_dotenv
 from flask import Flask
 from apscheduler.schedulers.background import BackgroundScheduler
-from opensearch_job_appender import OpenSearchJobAppender
+from opensearch_appender.job_appender import OpenSearchJobAppender
 
 load_dotenv()
 

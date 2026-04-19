@@ -153,6 +153,7 @@ opensearch-dashboards-3.3.0.yml                    ← Dashboards 설정 (3.3.0)
 
 # 공용 라이브러리
 simple-lib-spring-opensearch-appender/             ← Spring Boot 공용 OpenSearch Appender 라이브러리 (com.cube:1.0.0)
+simple-lib-python-opensearch-appender/             ← Python 공용 OpenSearch Appender 라이브러리 (opensearch-appender:1.0.0)
 
 # 배치잡 앱
 simple-jobs-spring-maven/                          ← Spring Boot 3.5 + Maven
@@ -234,14 +235,13 @@ cp .env-example .env
 | `simple-jobs-node-express/src/opensearch-job-appender.js` | Node.js / Express | Job |
 | `simple-jobs-node-fastify/src/opensearch-job-appender.js` | Node.js / Fastify | Job |
 | `simple-jobs-node-nestjs/src/opensearch.job-appender.ts` | Node.js / NestJS | Job |
-| `simple-jobs-python-flask/opensearch_job_appender.py` | Python / Flask | Job |
-| `simple-jobs-python-fastapi/opensearch_job_appender.py` | Python / FastAPI | Job |
+| `simple-lib-python-opensearch-appender/opensearch_appender/job_appender.py` | Python | Job |
 | `simple-lib-spring-opensearch-appender/src/main/java/com/cube/opensearch/OpenSearchJobAppender.java` | Spring Boot | Job |
 | `simple-rest-node-express/src/opensearch-web-appender.js` | Node.js / Express | Web |
 | `simple-rest-node-fastify/src/opensearch-web-appender.js` | Node.js / Fastify | Web |
 | `simple-rest-node-nestjs/src/opensearch.web-appender.ts` | Node.js / NestJS | Web |
-| `simple-rest-python-flask/opensearch_web_appender.py` | Python / Flask | Web |
-| `simple-rest-python-fastapi/opensearch_web_appender.py` | Python / FastAPI | Web |
+| `simple-lib-python-opensearch-appender/opensearch_appender/web_appender_flask.py` | Python / Flask | Web |
+| `simple-lib-python-opensearch-appender/opensearch_appender/web_appender_fastapi.py` | Python / FastAPI | Web |
 | `simple-lib-spring-opensearch-appender/src/main/java/com/cube/opensearch/OpenSearchWebAppender.java` | Spring Boot | Web |
 | `simple-page-react-nextjs/lib/opensearch-web-appender.js` | React / Next.js | Web |
 

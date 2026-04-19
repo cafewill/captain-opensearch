@@ -1,8 +1,3 @@
-"""
-OpenSearch Web Appender — Flask용 (HTTP 요청 추적 포함)
-표준 라이브러리만 사용, 추가 의존성 없음
-"""
-
 import atexit
 import base64
 import json

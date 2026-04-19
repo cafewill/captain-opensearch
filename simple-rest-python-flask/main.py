@@ -7,7 +7,7 @@ load_dotenv()
 
 from flask import Flask, request, jsonify
 import db
-from opensearch_web_appender import OpenSearchWebAppender
+from opensearch_appender.web_appender_flask import OpenSearchWebAppender
 
 app = Flask(__name__)
 
