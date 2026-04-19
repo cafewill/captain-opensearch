@@ -7,6 +7,7 @@ OpenSearch _bulk API 어펜더 — Python 표준 라이브러리만 사용 (추�
   3. from opensearch_appender import OpenSearchAppender 후 인스턴스 생성
 """
 
+import atexit
 import base64
 import json
 import os
@@ -14,6 +15,7 @@ import queue
 import socket
 import ssl
 import threading
+import time
 import urllib.request
 from datetime import datetime, timezone, timedelta
 
@@ -41,6 +43,7 @@ class OpenSearchJobAppender:
         self._max_bytes   = max_batch_bytes
         self._url         = f'{scheme}://{host}:{port}/_bulk'
         self._queue       = queue.Queue(maxsize=queue_size)
+        self._retry       = []  # 전송 실패 항목 — 다음 _flush() 에서 우선 처리
         self._auth        = None
         if username:
             creds      = base64.b64encode(f'{username}:{password}'.encode()).decode()
@@ -48,10 +51,12 @@ class OpenSearchJobAppender:
         self._ssl_ctx                  = ssl.create_default_context()
         self._ssl_ctx.check_hostname   = False
         self._ssl_ctx.verify_mode      = ssl.CERT_NONE
-        self._thread = threading.Thread(
+        self._running = True
+        self._thread  = threading.Thread(
             target=self._run, args=(flush_interval_seconds,), daemon=True
         )
         self._thread.start()
+        atexit.register(self.stop)  # 프로세스 종료 시 미전송 로그 플러시
 
     def log(self, level: str, message: str, **extra):
         now   = datetime.now(timezone.utc)
@@ -72,14 +77,19 @@ class OpenSearchJobAppender:
         except queue.Full:
             pass
 
+    def stop(self):
+        self._running = False
+        self._flush()
+
     def _run(self, interval: int):
-        import time
-        while True:
+        while self._running:
             time.sleep(interval)
             self._flush()
 
     def _flush(self):
-        items = []
+        # 이전 전송 실패 항목을 우선 처리 후 새 항목 추가
+        items = self._retry
+        self._retry = []
         try:
             while True:
                 items.append(self._queue.get_nowait())
@@ -87,17 +97,23 @@ class OpenSearchJobAppender:
             pass
         if not items:
             return
-        bulk = ''
-        for idx, doc in items:
-            bulk += json.dumps({'index': {'_index': idx}}) + '\n'
-            bulk += json.dumps(doc) + '\n'
-            if len(bulk.encode()) >= self._max_bytes:
-                self._send(bulk)
-                bulk = ''
+        bulk  = ''
+        batch = []
+        for item in items:
+            meta    = json.dumps({'index': {'_index': item[0]}}) + '\n'
+            doc_str = json.dumps(item[1]) + '\n'
+            addition = len((meta + doc_str).encode())
+            # 추가 전 초과 여부 확인 — 배치에 내용이 있을 때만 먼저 전송
+            if bulk and len(bulk.encode()) + addition > self._max_bytes:
+                self._send(batch, bulk)
+                bulk  = ''
+                batch = []
+            bulk  += meta + doc_str
+            batch.append(item)
         if bulk:
-            self._send(bulk)
+            self._send(batch, bulk)
 
-    def _send(self, body: str):
+    def _send(self, items: list, body: str):
         try:
             data = body.encode('utf-8')
             req  = urllib.request.Request(self._url, data=data, method='POST')
@@ -108,3 +124,8 @@ class OpenSearchJobAppender:
                 pass
         except Exception as e:
             print(f'[OpenSearch] 전송 실패: {e}', flush=True)
+            # 큐 여유가 있으면 다음 flush 에서 재시도
+            if len(self._retry) + len(items) <= self._queue.maxsize:
+                self._retry = items + self._retry
+            else:
+                print(f'[OpenSearch] {len(items)}건 유실 (재시도 용량 초과)', flush=True)

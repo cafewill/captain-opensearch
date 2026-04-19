@@ -3,6 +3,7 @@ OpenSearch Web Appender — Flask용 (HTTP 요청 추적 포함)
 표준 라이브러리만 사용, 추가 의존성 없음
 """
 
+import atexit
 import base64
 import json
 import os
@@ -39,6 +40,7 @@ class OpenSearchWebAppender:
         self._max_bytes   = max_batch_bytes
         self._url         = f'{scheme}://{host}:{port}/_bulk'
         self._queue       = queue.Queue(maxsize=queue_size)
+        self._retry       = []  # 전송 실패 항목 — 다음 _flush() 에서 우선 처리
         self._auth        = None
         if username:
             creds      = base64.b64encode(f'{username}:{password}'.encode()).decode()
@@ -49,6 +51,7 @@ class OpenSearchWebAppender:
         self._running = True
         self._thread  = threading.Thread(target=self._run, args=(flush_interval_seconds,), daemon=True)
         self._thread.start()
+        atexit.register(self.stop)  # 프로세스 종료 시 미전송 로그 플러시
 
     def log(self, level: str, message: str, **extra):
         now   = datetime.now(timezone.utc)
@@ -71,7 +74,7 @@ class OpenSearchWebAppender:
 
     def before_request(self, request):
         """Flask before_request 훅에서 호출 — trace_id, start_time 주입"""
-        request.trace_id  = request.headers.get('X-Request-ID') or str(uuid.uuid4())
+        request.trace_id   = request.headers.get('X-Request-ID') or str(uuid.uuid4())
         request.start_time = time.time()
 
     def after_request(self, request, response):
@@ -102,7 +105,9 @@ class OpenSearchWebAppender:
             self._flush()
 
     def _flush(self):
-        items = []
+        # 이전 전송 실패 항목을 우선 처리 후 새 항목 추가
+        items = self._retry
+        self._retry = []
         try:
             while True:
                 items.append(self._queue.get_nowait())
@@ -110,17 +115,23 @@ class OpenSearchWebAppender:
             pass
         if not items:
             return
-        bulk = ''
-        for idx, doc in items:
-            bulk += json.dumps({'index': {'_index': idx}}) + '\n'
-            bulk += json.dumps(doc) + '\n'
-            if len(bulk.encode()) >= self._max_bytes:
-                self._send(bulk)
-                bulk = ''
+        bulk  = ''
+        batch = []
+        for item in items:
+            meta    = json.dumps({'index': {'_index': item[0]}}) + '\n'
+            doc_str = json.dumps(item[1]) + '\n'
+            addition = len((meta + doc_str).encode())
+            # 추가 전 초과 여부 확인 — 배치에 내용이 있을 때만 먼저 전송
+            if bulk and len(bulk.encode()) + addition > self._max_bytes:
+                self._send(batch, bulk)
+                bulk  = ''
+                batch = []
+            bulk  += meta + doc_str
+            batch.append(item)
         if bulk:
-            self._send(bulk)
+            self._send(batch, bulk)
 
-    def _send(self, body: str):
+    def _send(self, items: list, body: str):
         try:
             data = body.encode('utf-8')
             req  = urllib.request.Request(self._url, data=data, method='POST')
@@ -131,3 +142,8 @@ class OpenSearchWebAppender:
                 pass
         except Exception as e:
             print(f'[OpenSearch] 전송 실패: {e}', flush=True)
+            # 큐 여유가 있으면 다음 flush 에서 재시도
+            if len(self._retry) + len(items) <= self._queue.maxsize:
+                self._retry = items + self._retry
+            else:
+                print(f'[OpenSearch] {len(items)}건 유실 (재시도 용량 초과)', flush=True)
