@@ -1,6 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <configuration>
 
+    <statusListener class="ch.qos.logback.core.status.OnConsoleStatusListener"/>
+
     <springProperty scope="context" name="OPENSEARCH_ENV"            source="opensearch.env"                          defaultValue="local"/>
     <springProperty scope="context" name="OPENSEARCH_NAME"           source="opensearch.name"                         defaultValue="app"/>
     <springProperty scope="context" name="OPENSEARCH_SCHEME"         source="opensearch.scheme"                       defaultValue="https"/>
@@ -30,7 +32,7 @@
         </encoder>
     </appender>
 
-    <appender name="OPENSEARCH" class="com.cube.simple.config.OpenSearchWebAppender">
+    <appender name="OPENSEARCH" class="com.cube.opensearch.OpenSearchWebAppender">
         <url>${OPENSEARCH_SCHEME}://${OPENSEARCH_HOST}:${OPENSEARCH_PORT}/_bulk</url>
         <index>logs-${OPENSEARCH_NAME}-%date{yyyy.MM.dd}</index>
         <username>${OPENSEARCH_USER}</username>

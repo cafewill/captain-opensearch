@@ -1,0 +1,98 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <groupId>com.cube</groupId>
+    <artifactId>simple-opensearch-appender</artifactId>
+    <version>1.0.0</version>
+    <packaging>jar</packaging>
+    <description>OpenSearch _bulk API appender library — Job / Web 어펜더 + Spring Boot AutoConfiguration</description>
+
+    <properties>
+        <java.version>21</java.version>
+        <maven.compiler.source>21</maven.compiler.source>
+        <maven.compiler.target>21</maven.compiler.target>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <spring-boot.version>3.5.13</spring-boot.version>
+    </properties>
+
+    <!--
+        spring-boot-starter-parent 는 사용하지 않는다.
+        애플리케이션용 parent 를 라이브러리에 쓰면 fat-JAR 플러그인 등이 따라오므로
+        spring-boot-dependencies BOM 만 dependencyManagement 로 import 한다.
+    -->
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-dependencies</artifactId>
+                <version>${spring-boot.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
+
+    <dependencies>
+        <!-- logback: UnsynchronizedAppenderBase, ILoggingEvent — 소비 앱이 제공 -->
+        <dependency>
+            <groupId>ch.qos.logback</groupId>
+            <artifactId>logback-classic</artifactId>
+            <scope>provided</scope>
+        </dependency>
+
+        <!-- spring-context: @Configuration, @Bean, @Value, TaskScheduler (MdcJobFilter) -->
+        <dependency>
+            <groupId>org.springframework</groupId>
+            <artifactId>spring-context</artifactId>
+            <scope>provided</scope>
+        </dependency>
+
+        <!-- spring-boot-autoconfigure: @AutoConfiguration, @ConditionalOn* -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-autoconfigure</artifactId>
+            <scope>provided</scope>
+        </dependency>
+
+        <!-- spring-webmvc: OncePerRequestFilter (MdcWebFilter) — REST 앱만 제공, Job 앱 없음 -->
+        <dependency>
+            <groupId>org.springframework</groupId>
+            <artifactId>spring-webmvc</artifactId>
+            <scope>provided</scope>
+            <optional>true</optional>
+        </dependency>
+
+        <!-- jakarta.servlet-api: HttpServletRequest/Response (MdcWebFilter) — REST 앱만 제공 -->
+        <dependency>
+            <groupId>jakarta.servlet</groupId>
+            <artifactId>jakarta.servlet-api</artifactId>
+            <scope>provided</scope>
+            <optional>true</optional>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <!--
+                spring-boot-maven-plugin 을 쓰지 않는다.
+                그 플러그인을 쓰면 실행 가능한 fat-JAR 로 재패키징되어
+                다른 프로젝트에서 의존성으로 사용할 수 없게 된다.
+                기본 maven-jar-plugin 이 일반 라이브러리 JAR 를 생성한다.
+            -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>3.13.0</version>
+                <configuration>
+                    <source>${java.version}</source>
+                    <target>${java.version}</target>
+                    <encoding>UTF-8</encoding>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+
+</project>

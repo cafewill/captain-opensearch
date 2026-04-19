@@ -1,4 +1,4 @@
-package com.cube.simple.config;
+package com.cube.opensearch;
 
 import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.classic.spi.IThrowableProxy;
@@ -30,15 +30,21 @@ import java.util.concurrent.TimeUnit;
 /**
  * 추가 의존성 없이 JDK + logback-classic 만으로 구현한 OpenSearch 어펜더.
  *
- * 다른 프로젝트 반영 시 이 파일 하나만 복사하면 됨.
+ * [라이브러리 사용 시]
+ *   1. pom.xml / build.gradle 에 simple-opensearch-appender 의존성 추가
+ *   2. logback-spring.xml 에 appender class="com.cube.opensearch.OpenSearchJobAppender" 추가
+ *   3. application.properties 에 opensearch.* 프로퍼티 추가
+ *   → MdcJobFilter 는 OpenSearchJobAutoConfiguration 이 자동 등록 (별도 설정 불필요)
+ *
+ * [단독 파일 복사 사용 시]
  *   1. {base-package}/config/ 에 복사 (패키지 선언만 수정)
  *   2. logback-spring.xml 에 appender 설정 추가
  *   3. application.properties 에 opensearch.* 프로퍼티 추가
+ *   → MdcJobFilter 는 컴포넌트 스캔이 자동 감지
  *
  * 포함된 기능:
- *   [Appender]            _bulk API 배치 전송 / HTTPS TrustAll (내부망) / 스택 트레이스 / MDC 자동 포함
+ *   [Appender]     _bulk API 배치 전송 / HTTPS TrustAll (내부망) / 스택 트레이스 / MDC 자동 포함
  *   [MdcJobFilter] 스케줄러 스레드마다 app · env · instance_id 를 MDC 에 자동 설정
- *                         servlet 의존성 없이 운영환경·컨테이너 인스턴스 정보를 모든 잡 로그에 포함
  */
 public class OpenSearchJobAppender extends UnsynchronizedAppenderBase<ILoggingEvent> {
 
@@ -76,6 +82,8 @@ public class OpenSearchJobAppender extends UnsynchronizedAppenderBase<ILoggingEv
         DateTimeFormatter.ISO_OFFSET_DATE_TIME.withZone(ZoneId.of("Asia/Seoul"));
 
     private static final Set<String> NUMERIC_MDC_FIELDS = Set.of("http_status", "duration_ms");
+    // toBulkLine() 에서 고정 필드로 이미 추가되는 키 — MDC 루프에서 중복 방지
+    private static final Set<String> FIXED_DOC_FIELDS  = Set.of("app", "env", "instance_id");
 
     // ── 생명주기 ─────────────────────────────────────────────────────────────
 
@@ -192,6 +200,7 @@ public class OpenSearchJobAppender extends UnsynchronizedAppenderBase<ILoggingEv
         if (mdc != null && !mdc.isEmpty()) {
             for (Map.Entry<String, String> entry : mdc.entrySet()) {
                 String k = entry.getKey();
+                if (FIXED_DOC_FIELDS.contains(k)) continue;
                 String v = entry.getValue();
                 doc.append(",\"").append(esc(k)).append("\":");
                 if (NUMERIC_MDC_FIELDS.contains(k) && isNumeric(v)) {
@@ -266,10 +275,17 @@ public class OpenSearchJobAppender extends UnsynchronizedAppenderBase<ILoggingEv
             try (OutputStream os = conn.getOutputStream()) { os.write(bytes); }
 
             int status = conn.getResponseCode();
-            if (status >= 400) {
-                addWarn("OpenSearch _bulk HTTP " + status);
-                try (InputStream es = conn.getErrorStream()) {
-                    if (es != null) es.transferTo(OutputStream.nullOutputStream());
+            // Always read response body — prevents dirty pooled connections on next send
+            try (InputStream is = status >= 400 ? conn.getErrorStream() : conn.getInputStream()) {
+                if (is != null) {
+                    String respBody = new String(is.readAllBytes(), StandardCharsets.UTF_8);
+                    if (status >= 400) {
+                        addWarn("OpenSearch _bulk HTTP " + status + ": " +
+                                respBody.substring(0, Math.min(500, respBody.length())));
+                    } else if (respBody.contains("\"errors\":true")) {
+                        addWarn("OpenSearch _bulk partial errors: " +
+                                respBody.substring(0, Math.min(500, respBody.length())));
+                    }
                 }
             }
             conn.disconnect();
@@ -294,10 +310,10 @@ public class OpenSearchJobAppender extends UnsynchronizedAppenderBase<ILoggingEv
     // =========================================================================
     // MdcJobFilter — 스케줄러 스레드 MDC 자동 설정
     //
-    // Spring 컴포넌트 스캔이 static inner class 를 자동 감지하므로
-    // 별도 @Bean 등록이나 추가 설정 없이 바로 동작함.
+    // [라이브러리 사용 시] OpenSearchJobAutoConfiguration 이 자동 등록 — 별도 사용 불필요.
+    // [단독 파일 복사 시] Spring 컴포넌트 스캔이 static inner class 를 자동 감지.
     //
-    // 설정되는 MDC 필드 (OpenSearchAppender 가 로그 도큐먼트에 자동 포함):
+    // 설정되는 MDC 필드:
     //   app         — spring.application.name
     //   env         — opensearch.env (local | dev | staging | prod)
     //   instance_id — HOSTNAME 환경변수(k8s 파드명) or InetAddress
