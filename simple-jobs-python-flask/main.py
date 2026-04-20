@@ -19,9 +19,7 @@ MANAGER_DELAY  = int(os.getenv('JOB_MANAGER_DELAY',  '15000')) / 1000
 OPERATOR_DELAY = int(os.getenv('JOB_OPERATOR_DELAY', '20000')) / 1000
 
 appender = OpenSearchJobAppender(
-    scheme=os.getenv('OPENSEARCH_SCHEME', 'https'),
-    host=os.getenv('OPENSEARCH_HOST', 'localhost'),
-    port=int(os.getenv('OPENSEARCH_PORT', '9200')),
+    url=os.getenv('OPENSEARCH_URL', 'https://localhost:9200'),
     username=os.getenv('OPENSEARCH_USERNAME', ''),
     password=os.getenv('OPENSEARCH_PASSWORD', ''),
     app=os.getenv('OPENSEARCH_NAME', 'simple-jobs-python-flask'),

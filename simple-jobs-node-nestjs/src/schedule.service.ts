@@ -10,9 +10,7 @@ export class ScheduleService implements OnModuleInit, OnModuleDestroy {
 
   constructor(private readonly schedulerRegistry: SchedulerRegistry) {
     this.appender = new OpenSearchJobAppender({
-      scheme:               process.env.OPENSEARCH_SCHEME              ?? 'https',
-      host:                 process.env.OPENSEARCH_HOST                ?? 'localhost',
-      port:                 parseInt(process.env.OPENSEARCH_PORT       ?? '9200'),
+      url:                  process.env.OPENSEARCH_URL                 ?? 'https://localhost:9200',
       username:             process.env.OPENSEARCH_USERNAME            ?? '',
       password:             process.env.OPENSEARCH_PASSWORD            ?? '',
       app:                  process.env.OPENSEARCH_NAME                ?? 'simple-jobs-node-nestjs',

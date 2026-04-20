@@ -17,9 +17,7 @@ KST = timezone(timedelta(hours=9), 'KST')
 class OpenSearchWebAppender:
     def __init__(
         self,
-        scheme='https',
-        host='localhost',
-        port=9200,
+        url='https://localhost:9200',
         username='',
         password='',
         app='app',
@@ -33,7 +31,7 @@ class OpenSearchWebAppender:
         self._env         = env
         self._instance_id = os.environ.get('HOSTNAME') or socket.gethostname()
         self._max_bytes   = max_batch_bytes
-        self._url         = f'{scheme}://{host}:{port}/_bulk'
+        self._url         = f'{url}/_bulk'
         self._queue       = queue.Queue(maxsize=queue_size)
         self._retry       = []  # 전송 실패 항목 — 다음 _flush() 에서 우선 처리
         self._auth        = None

@@ -22,9 +22,7 @@ function toOffsetIso(date: Date, offsetMinutes: number): string {
  */
 
 export interface OpenSearchJobAppenderConfig {
-  scheme?:               string;
-  host?:                 string;
-  port?:                 number;
+  url?:                  string;
   username?:             string;
   password?:             string;
   app?:                  string;
@@ -53,9 +51,7 @@ export class OpenSearchJobAppender {
   private readonly timer:      NodeJS.Timeout;
 
   constructor({
-    scheme               = 'https',
-    host                 = 'localhost',
-    port                 = 9200,
+    url                  = 'https://localhost:9200',
     username             = '',
     password             = '',
     app                  = 'app',
@@ -73,8 +69,8 @@ export class OpenSearchJobAppender {
     this.auth       = username
       ? Buffer.from(`${username}:${password}`).toString('base64')
       : null;
-    this.lib    = scheme === 'https' ? https : http;
-    this.parsed = new URL(`${scheme}://${host}:${port}/_bulk`);
+    this.parsed = new URL(`${url}/_bulk`);
+    this.lib    = this.parsed.protocol === 'https:' ? https : http;
     this.timer  = setInterval(() => this.flush(), flushIntervalSeconds * 1000);
     this.timer.unref();
   }

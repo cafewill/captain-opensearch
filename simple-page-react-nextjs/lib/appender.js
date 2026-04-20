@@ -4,9 +4,7 @@ const OpenSearchWebAppender = require('./opensearch-web-appender');
 
 function createAppender() {
   return new OpenSearchWebAppender({
-    scheme:   process.env.OPENSEARCH_SCHEME   || 'https',
-    host:     process.env.OPENSEARCH_HOST     || 'localhost',
-    port:     parseInt(process.env.OPENSEARCH_PORT || '9200'),
+    url:      process.env.OPENSEARCH_URL      || 'https://localhost:9200',
     username: process.env.OPENSEARCH_USERNAME || '',
     password: process.env.OPENSEARCH_PASSWORD || '',
     app:                  process.env.OPENSEARCH_NAME                || 'simple-page-react-nextjs',

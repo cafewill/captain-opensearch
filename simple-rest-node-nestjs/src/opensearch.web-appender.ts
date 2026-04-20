@@ -16,9 +16,7 @@ function toOffsetIso(date: Date, offsetMinutes: number): string {
 }
 
 export interface OpenSearchWebAppenderConfig {
-  scheme?:               string;
-  host?:                 string;
-  port?:                 number;
+  url?:                  string;
   username?:             string;
   password?:             string;
   app?:                  string;
@@ -43,9 +41,7 @@ export class OpenSearchWebAppender implements NestMiddleware {
   private readonly timer:      NodeJS.Timeout;
 
   constructor() {
-    const scheme              = process.env.OPENSEARCH_SCHEME              ?? 'https';
-    const host                = process.env.OPENSEARCH_HOST                ?? 'localhost';
-    const port                = parseInt(process.env.OPENSEARCH_PORT       ?? '9200');
+    const url                 = process.env.OPENSEARCH_URL                 ?? 'https://localhost:9200';
     const username            = process.env.OPENSEARCH_USERNAME            ?? '';
     const password            = process.env.OPENSEARCH_PASSWORD            ?? '';
     const app                 = process.env.OPENSEARCH_NAME                ?? 'simple-rest-node-nestjs';
@@ -61,8 +57,8 @@ export class OpenSearchWebAppender implements NestMiddleware {
     this.maxBytes   = maxBatchBytes;
     this.maxQueue   = queueSize;
     this.auth       = username ? Buffer.from(`${username}:${password}`).toString('base64') : null;
-    this.lib        = scheme === 'https' ? https : http;
-    this.parsed     = new URL(`${scheme}://${host}:${port}/_bulk`);
+    this.parsed     = new URL(`${url}/_bulk`);
+    this.lib        = this.parsed.protocol === 'https:' ? https : http;
     this.timer      = setInterval(() => this.flush(), flushIntervalSeconds * 1000);
     this.timer.unref();
   }
