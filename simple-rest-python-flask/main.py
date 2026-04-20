@@ -12,9 +12,7 @@ from opensearch_appender.web_appender_flask import OpenSearchWebAppender
 app = Flask(__name__)
 
 appender = OpenSearchWebAppender(
-    scheme                = os.environ.get('OPENSEARCH_SCHEME',   'https'),
-    host                  = os.environ.get('OPENSEARCH_HOST',     'localhost'),
-    port                  = int(os.environ.get('OPENSEARCH_PORT', '9200')),
+    url                   = os.environ.get('OPENSEARCH_URL',      'https://localhost:9200'),
     username              = os.environ.get('OPENSEARCH_USERNAME', ''),
     password              = os.environ.get('OPENSEARCH_PASSWORD', ''),
     app                   = os.environ.get('OPENSEARCH_NAME',     'simple-rest-python-flask'),

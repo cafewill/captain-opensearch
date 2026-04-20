@@ -16,9 +16,7 @@ function _toOffsetIso(date, offsetMinutes) {
 
 class OpenSearchWebAppender {
   constructor({
-    scheme               = 'https',
-    host                 = 'localhost',
-    port                 = 9200,
+    url                  = 'https://localhost:9200',
     username             = '',
     password             = '',
     app                  = 'app',
@@ -37,8 +35,8 @@ class OpenSearchWebAppender {
     this._auth       = username
       ? Buffer.from(`${username}:${password}`).toString('base64')
       : null;
-    this._lib    = scheme === 'https' ? https : http;
-    this._parsed = new URL(`${scheme}://${host}:${port}/_bulk`);
+    this._parsed = new URL(`${url}/_bulk`);
+    this._lib    = this._parsed.protocol === 'https:' ? https : http;
     this._timer  = setInterval(() => this._flush(), flushIntervalSeconds * 1000);
     this._timer.unref();
   }
