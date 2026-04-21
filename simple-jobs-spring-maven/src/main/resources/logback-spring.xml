@@ -30,10 +30,6 @@
         </encoder>
     </appender>
 
-    <!--
-        인덱스 패턴: logs-simple-jobs-spring-maven-yyyy.MM.dd
-        spring.application.name 이 OPENSEARCH_NAME 으로 바인딩되어 자동 반영됨
-    -->
     <appender name="OPENSEARCH" class="com.cube.opensearch.OpenSearchJobAppender">
         <url>${OPENSEARCH_URL}/_bulk</url>
         <index>logs-${OPENSEARCH_NAME}-%date{yyyy.MM.dd}</index>
@@ -41,9 +37,9 @@
         <password>${OPENSEARCH_PASS}</password>
         <app>${OPENSEARCH_NAME}</app>
         <env>${OPENSEARCH_ENV}</env>
+        <queueSize>${OPENSEARCH_QUEUE_SIZE}</queueSize>
         <maxBatchBytes>${OPENSEARCH_MAX_BYTES}</maxBatchBytes>
         <flushIntervalSeconds>${OPENSEARCH_FLUSH_INTERVAL}</flushIntervalSeconds>
-        <queueSize>${OPENSEARCH_QUEUE_SIZE}</queueSize>
     </appender>
 
     <root level="INFO">
