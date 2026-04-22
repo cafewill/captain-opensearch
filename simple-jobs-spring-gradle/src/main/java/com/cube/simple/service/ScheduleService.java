@@ -21,21 +21,11 @@ public class ScheduleService {
 		log.info(message);
 	}
 
-	@Recover
-	public void recoverSystemJob(Exception e) {
-		log.error("OS : system job failed after retries - {}", e.getMessage());
-	}
-
 	@Retryable(retryFor = Exception.class, maxAttempts = 3, backoff = @Backoff(delay = 1000))
 	@Scheduled(fixedDelayString = "${job.manager.delay:15000}")
 	public void doManagerJob() {
 		String message = String.format("OS : Just do manager job by spring gradle [%s]", UUID.randomUUID());
 		log.info(message);
-	}
-
-	@Recover
-	public void recoverManagerJob(Exception e) {
-		log.error("OS : manager job failed after retries - {}", e.getMessage());
 	}
 
 	@Retryable(retryFor = Exception.class, maxAttempts = 3, backoff = @Backoff(delay = 1000))
@@ -46,7 +36,7 @@ public class ScheduleService {
 	}
 
 	@Recover
-	public void recoverOperatorJob(Exception e) {
-		log.error("OS : operator job failed after retries - {}", e.getMessage());
+	public void recoverJob(Exception e) {
+		log.error("OS : scheduled job failed after retries - {}", e.getMessage(), e);
 	}
 }

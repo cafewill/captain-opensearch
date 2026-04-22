@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+    <appender name="OPENSEARCH_WEB" class="com.cube.opensearch.OpenSearchAppender">
+        <url>${opensearch.url}</url>
+        <index>${opensearch.index}</index>
+        <username>${opensearch.username:-}</username>
+        <password>${opensearch.password:-}</password>
+        <app>${opensearch.app:${spring.application.name:-app}}</app>
+        <env>${opensearch.env:${spring.profiles.active:-default}}</env>
+        <instanceId>${opensearch.instance-id:-}</instanceId>
+        <maxBatchBytes>${opensearch.max-batch-bytes:-262144}</maxBatchBytes>
+        <flushIntervalSeconds>${opensearch.flush-interval-seconds:-3}</flushIntervalSeconds>
+        <queueSize>${opensearch.queue-size:-10000}</queueSize>
+        <connectTimeoutMillis>${opensearch.connect-timeout-millis:-3000}</connectTimeoutMillis>
+        <readTimeoutMillis>${opensearch.read-timeout-millis:-5000}</readTimeoutMillis>
+        <retryInitialDelayMillis>${opensearch.retry-initial-delay-millis:-500}</retryInitialDelayMillis>
+        <retryMaxDelayMillis>${opensearch.retry-max-delay-millis:-10000}</retryMaxDelayMillis>
+        <maxRetries>${opensearch.max-retries:-3}</maxRetries>
+        <retryPartialFailures>${opensearch.retry-partial-failures:-true}</retryPartialFailures>
+        <trustAllSsl>${opensearch.trust-all-ssl:-true}</trustAllSsl>
+        <deadLetterLoggerName>${opensearch.dead-letter-logger-name:-com.cube.opensearch.deadletter}</deadLetterLoggerName>
+        <timestampZone>${opensearch.timestamp-zone:-UTC}</timestampZone>
+        <includeMdc>${opensearch.include-mdc:-true}</includeMdc>
+    </appender>
+
+    <appender name="OPENSEARCH_JOB" class="com.cube.opensearch.OpenSearchJobAppender">
+        <url>${opensearch.url}</url>
+        <index>${opensearch.index}</index>
+        <username>${opensearch.username:-}</username>
+        <password>${opensearch.password:-}</password>
+        <app>${opensearch.app:${spring.application.name:-app}}</app>
+        <env>${opensearch.env:${spring.profiles.active:-default}}</env>
+        <instanceId>${opensearch.instance-id:-}</instanceId>
+        <maxBatchBytes>${opensearch.max-batch-bytes:-262144}</maxBatchBytes>
+        <flushIntervalSeconds>${opensearch.flush-interval-seconds:-3}</flushIntervalSeconds>
+        <queueSize>${opensearch.queue-size:-10000}</queueSize>
+        <connectTimeoutMillis>${opensearch.connect-timeout-millis:-3000}</connectTimeoutMillis>
+        <readTimeoutMillis>${opensearch.read-timeout-millis:-5000}</readTimeoutMillis>
+        <retryInitialDelayMillis>${opensearch.retry-initial-delay-millis:-500}</retryInitialDelayMillis>
+        <retryMaxDelayMillis>${opensearch.retry-max-delay-millis:-10000}</retryMaxDelayMillis>
+        <maxRetries>${opensearch.max-retries:-3}</maxRetries>
+        <retryPartialFailures>${opensearch.retry-partial-failures:-true}</retryPartialFailures>
+        <trustAllSsl>${opensearch.trust-all-ssl:-true}</trustAllSsl>
+        <deadLetterLoggerName>${opensearch.dead-letter-logger-name:-com.cube.opensearch.deadletter}</deadLetterLoggerName>
+        <timestampZone>${opensearch.timestamp-zone:-UTC}</timestampZone>
+        <includeMdc>${opensearch.include-mdc:-true}</includeMdc>
+    </appender>
+
+    <root level="INFO">
+        <appender-ref ref="OPENSEARCH_WEB"/>
+        <appender-ref ref="OPENSEARCH_JOB"/>
+    </root>
+</configuration>

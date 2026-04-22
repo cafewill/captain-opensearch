@@ -35,11 +35,11 @@
 			<artifactId>spring-boot-starter</artifactId>
 		</dependency>
 
-		<dependency>
-			<groupId>com.cube</groupId>
-			<artifactId>simple-lib-spring-opensearch-appender</artifactId>
-			<version>1.1.0</version>
-		</dependency>
+			<dependency>
+				<groupId>com.cube</groupId>
+				<artifactId>simple-lib-spring-opensearch-appender</artifactId>
+				<version>1.2.0</version>
+			</dependency>
 
 		<dependency>
 			<groupId>org.springframework.retry</groupId>
@@ -59,16 +59,7 @@
 			<artifactId>spring-boot-starter-test</artifactId>
 			<scope>test</scope>
 		</dependency>
-		
-<!-- Source: https://mvnrepository.com/artifact/com.agido/logback-elasticsearch-appender -->
-<dependency>
-    <groupId>com.agido</groupId>
-    <artifactId>logback-elasticsearch-appender</artifactId>
-    <version>3.0.19</version>
-    <scope>compile</scope>
-</dependency>
-		
-	</dependencies>
+		</dependencies>
 
 	<build>
 		<plugins>
