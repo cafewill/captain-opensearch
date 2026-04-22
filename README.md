@@ -11,6 +11,7 @@
 ## 목차
 
 0. [시작 전 — 설정 파일 준비](#0-시작-전--설정-파일-준비)
+0-1. [최근 진행 내역](#0-1-최근-진행-내역)
 1. [앱 목록 및 빌드·실행 방법](#1-앱-목록-및-빌드실행-방법)
 2. [커스텀 OpenSearch Appender 구성](#2-커스텀-opensearch-appender-구성)
 3. [OpenSearch 연동 로깅 항목](#3-opensearch-연동-로깅-항목)
@@ -45,6 +46,25 @@ cp .env-example .env
 
 예시 파일(`.env-example`)에는 로컬 테스트에 필요한 모든 설정이 포함되어 있어  
 복사 후 바로 실행 가능합니다.
+
+## 0-1. 최근 진행 내역
+
+최근 반영된 주요 작업은 아래와 같습니다.
+
+- Spring 공용 라이브러리 `simple-lib-spring-opensearch-appender-1.2.0` 를 기준으로 `_bulk` 응답 분석, partial failure 처리, `maxBatchSize`, `maxMessageSize`, `operation`, `includeKvp`, custom `headers` / `properties` 지원을 보강했습니다.
+- Spring 배치 샘플 `simple-jobs-spring-maven`, `simple-jobs-spring-gradle` 에 테스트 격리용 `logback-test.xml`, `job.scheduling.enabled=false` 대응을 추가했습니다.
+- MDC 예제 앱 `simple-jobs-spring-maven-with-mdc`, `simple-jobs-spring-gradle-with-mdc` 를 추가했습니다.
+- Spring 배치 4개 앱의 OpenSearch 계정 정보는 모두 `https://localhost:9200`, `admin`, `Demo3543##` 기준으로 맞췄습니다.
+- `docker-compose-3.6.0.yml` 기준 OpenSearch 3.6.0 과 Dashboards 3.6.0 환경에서 Spring MDC 로그 적재가 가능하도록 문서와 예시 설정을 함께 갱신했습니다.
+
+MDC 예제 앱에서 추가로 적재되는 대표 필드는 아래와 같습니다.
+
+- `traceId`
+- `jobName`
+- `jobRole`
+- `framework`
+- `appVariant`
+- `mdcSample`
 
 ---
 
@@ -213,22 +233,43 @@ npm run dev          # 개발 서버
 #### Spring Boot (Maven / Gradle)
 
 ```bash
+# 공통 라이브러리 재설치가 필요한 경우 먼저 수행
+cd simple-lib-spring-opensearch-appender-1.2.0
+../simple-jobs-spring-maven/mvnw install -q
+
 # Maven
 cd simple-jobs-spring-maven
+cp src/main/resources/application-example.properties src/main/resources/application.properties
 ./mvnw spring-boot:run
 
 # Maven + MDC
 cd simple-jobs-spring-maven-with-mdc
+cp src/main/resources/application-example.properties src/main/resources/application.properties
 ./mvnw spring-boot:run
 
 # Gradle
 cd simple-jobs-spring-gradle
+cp src/main/resources/application-example.properties src/main/resources/application.properties
 ./gradlew bootRun
 
 # Gradle + MDC
 cd simple-jobs-spring-gradle-with-mdc
+cp src/main/resources/application-example.properties src/main/resources/application.properties
 ./gradlew bootRun
 ```
+
+#### Spring Boot + MDC 연동 절차
+
+Spring 배치 앱에 MDC를 얹어 OpenSearch로 함께 적재하려면 아래 순서로 진행합니다.
+
+1. `simple-lib-spring-opensearch-appender-1.2.0` 를 로컬 `.m2` 에 설치합니다.
+2. 소비 앱 `pom.xml` 또는 `build.gradle` 에 `com.cube:simple-lib-spring-opensearch-appender:1.2.0` 의존성을 둡니다.
+3. `application-example.properties` 를 `application.properties` 로 복사합니다.
+4. `logback-spring.xml` 에 `OpenSearchJobAppender` 를 등록하고 `includeMdc=true`, `includeKvp=true`, `operation=create` 같은 값을 설정합니다.
+5. 배치 코드에서 `MDC.put("traceId", ...)`, `MDC.put("jobName", ...)` 식으로 커스텀 필드를 넣고, 로그 출력 후 `MDC.clear()` 로 정리합니다.
+6. 앱 실행 후 OpenSearch에 문서가 적재되는지 `curl` 또는 Dashboards Discover 로 확인합니다.
+
+`simple-jobs-spring-maven-with-mdc`, `simple-jobs-spring-gradle-with-mdc` 는 위 절차가 이미 반영된 샘플입니다.
 
 #### Node.js
 
@@ -860,6 +901,146 @@ curl -sk "https://localhost:9200/logs-simple-rest-spring-maven-$(date +%Y.%m.%d)
     "size": 10,
     "sort": [{ "@timestamp": { "order": "desc" } }],
     "query": { "match_all": {} }
+  }' | python3 -m json.tool
+```
+
+### 5-4-1. Spring 배치 4개 앱 최신 로그 10건 조회
+
+```bash
+curl -sk -u admin:Demo3543## \
+  -H "Content-Type: application/json" \
+  "https://localhost:9200/logs-simple-jobs-spring-*/_search" \
+  -d '{
+    "size": 10,
+    "sort": [
+      { "@timestamp": { "order": "desc" } }
+    ],
+    "_source": [
+      "@timestamp",
+      "app",
+      "env",
+      "level",
+      "logger",
+      "thread",
+      "message",
+      "instance_id"
+    ]
+  }' | python3 -m json.tool
+```
+
+### 5-4-2. Spring MDC 예제 앱 최신 로그 10건 조회
+
+```bash
+curl -sk -u admin:Demo3543## \
+  -H "Content-Type: application/json" \
+  "https://localhost:9200/logs-simple-jobs-spring-*-with-mdc-*/_search" \
+  -d '{
+    "size": 10,
+    "sort": [
+      { "@timestamp": { "order": "desc" } }
+    ],
+    "_source": [
+      "@timestamp",
+      "app",
+      "env",
+      "level",
+      "logger",
+      "thread",
+      "message",
+      "traceId",
+      "jobName",
+      "jobRole",
+      "framework",
+      "appVariant",
+      "mdcSample"
+    ]
+  }' | python3 -m json.tool
+```
+
+### 5-4-3. MDC 필드가 포함된 최신 10건만 필터 조회
+
+```bash
+curl -sk -u admin:Demo3543## \
+  -H "Content-Type: application/json" \
+  "https://localhost:9200/logs-simple-jobs-spring-*-with-mdc-*/_search" \
+  -d '{
+    "size": 10,
+    "sort": [
+      { "@timestamp": { "order": "desc" } }
+    ],
+    "query": {
+      "bool": {
+        "must": [
+          { "exists": { "field": "traceId" } },
+          { "exists": { "field": "jobName" } },
+          { "exists": { "field": "jobRole" } },
+          { "exists": { "field": "framework" } },
+          { "exists": { "field": "appVariant" } },
+          { "exists": { "field": "mdcSample" } }
+        ]
+      }
+    },
+    "_source": [
+      "@timestamp",
+      "app",
+      "message",
+      "traceId",
+      "jobName",
+      "jobRole",
+      "framework",
+      "appVariant",
+      "mdcSample"
+    ]
+  }' | python3 -m json.tool
+```
+
+### 5-4-4. Maven with MDC 앱만 최신 10건 조회
+
+```bash
+curl -sk -u admin:Demo3543## \
+  -H "Content-Type: application/json" \
+  "https://localhost:9200/logs-simple-jobs-spring-maven-with-mdc-*/_search" \
+  -d '{
+    "size": 10,
+    "sort": [
+      { "@timestamp": { "order": "desc" } }
+    ],
+    "_source": [
+      "@timestamp",
+      "app",
+      "message",
+      "traceId",
+      "jobName",
+      "jobRole",
+      "framework",
+      "appVariant",
+      "mdcSample"
+    ]
+  }' | python3 -m json.tool
+```
+
+### 5-4-5. Gradle with MDC 앱만 최신 10건 조회
+
+```bash
+curl -sk -u admin:Demo3543## \
+  -H "Content-Type: application/json" \
+  "https://localhost:9200/logs-simple-jobs-spring-gradle-with-mdc-*/_search" \
+  -d '{
+    "size": 10,
+    "sort": [
+      { "@timestamp": { "order": "desc" } }
+    ],
+    "_source": [
+      "@timestamp",
+      "app",
+      "message",
+      "traceId",
+      "jobName",
+      "jobRole",
+      "framework",
+      "appVariant",
+      "mdcSample"
+    ]
   }' | python3 -m json.tool
 ```
 
