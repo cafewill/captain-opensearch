@@ -9,6 +9,8 @@
     <springProperty scope="context" name="OPENSEARCH_USER"          source="opensearch.username"                     defaultValue="admin"/>
     <springProperty scope="context" name="OPENSEARCH_PASS"          source="opensearch.password"                     defaultValue=""/>
     <springProperty scope="context" name="OPENSEARCH_MAX_BYTES"     source="opensearch.batch.max-bytes"              defaultValue="1000000"/>
+    <springProperty scope="context" name="OPENSEARCH_MAX_BATCH_SIZE" source="opensearch.batch.max-size"              defaultValue="200"/>
+    <springProperty scope="context" name="OPENSEARCH_MESSAGE_MAX_SIZE" source="opensearch.batch.max-message-size"    defaultValue="32768"/>
     <springProperty scope="context" name="OPENSEARCH_FLUSH_INTERVAL" source="opensearch.batch.flush-interval-seconds" defaultValue="1"/>
     <springProperty scope="context" name="OPENSEARCH_QUEUE_SIZE"    source="opensearch.batch.queue-size"             defaultValue="8192"/>
     <springProperty scope="context" name="OPENSEARCH_CONNECT_TIMEOUT" source="opensearch.connect-timeout-millis"      defaultValue="3000"/>
@@ -20,6 +22,9 @@
     <springProperty scope="context" name="OPENSEARCH_TRUST_ALL_SSL" source="opensearch.trust-all-ssl"                defaultValue="true"/>
     <springProperty scope="context" name="OPENSEARCH_TIMESTAMP_ZONE" source="opensearch.timestamp-zone"              defaultValue="UTC"/>
     <springProperty scope="context" name="OPENSEARCH_INCLUDE_MDC"   source="opensearch.include-mdc"                  defaultValue="true"/>
+    <springProperty scope="context" name="OPENSEARCH_INCLUDE_KVP"   source="opensearch.include-kvp"                  defaultValue="true"/>
+    <springProperty scope="context" name="OPENSEARCH_OPERATION"     source="opensearch.operation"                    defaultValue="create"/>
+    <springProperty scope="context" name="OPENSEARCH_ERRORS_TO_STDERR" source="opensearch.errors-to-stderr"          defaultValue="true"/>
 
     <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
         <encoder>
@@ -42,12 +47,15 @@
     <appender name="OPENSEARCH" class="com.cube.opensearch.OpenSearchJobAppender">
         <url>${OPENSEARCH_URL}</url>
         <index>logs-${OPENSEARCH_NAME}-%date{yyyy.MM.dd}</index>
+        <operation>${OPENSEARCH_OPERATION}</operation>
         <username>${OPENSEARCH_USER}</username>
         <password>${OPENSEARCH_PASS}</password>
         <app>${OPENSEARCH_NAME}</app>
         <env>${OPENSEARCH_ENV}</env>
         <queueSize>${OPENSEARCH_QUEUE_SIZE}</queueSize>
         <maxBatchBytes>${OPENSEARCH_MAX_BYTES}</maxBatchBytes>
+        <maxBatchSize>${OPENSEARCH_MAX_BATCH_SIZE}</maxBatchSize>
+        <maxMessageSize>${OPENSEARCH_MESSAGE_MAX_SIZE}</maxMessageSize>
         <flushIntervalSeconds>${OPENSEARCH_FLUSH_INTERVAL}</flushIntervalSeconds>
         <connectTimeoutMillis>${OPENSEARCH_CONNECT_TIMEOUT}</connectTimeoutMillis>
         <readTimeoutMillis>${OPENSEARCH_READ_TIMEOUT}</readTimeoutMillis>
@@ -58,6 +66,23 @@
         <trustAllSsl>${OPENSEARCH_TRUST_ALL_SSL}</trustAllSsl>
         <timestampZone>${OPENSEARCH_TIMESTAMP_ZONE}</timestampZone>
         <includeMdc>${OPENSEARCH_INCLUDE_MDC}</includeMdc>
+        <includeKvp>${OPENSEARCH_INCLUDE_KVP}</includeKvp>
+        <errorsToStderr>${OPENSEARCH_ERRORS_TO_STDERR}</errorsToStderr>
+
+        <headers>
+            <header>
+                <name>Content-Type</name>
+                <value>application/x-ndjson</value>
+            </header>
+        </headers>
+
+        <properties>
+            <esProperty>
+                <name>stack_trace</name>
+                <value>%ex{full}</value>
+                <allowEmpty>false</allowEmpty>
+            </esProperty>
+        </properties>
     </appender>
 
     <root level="INFO">

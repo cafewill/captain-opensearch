@@ -1,11 +1,14 @@
 package com.cube.opensearch;
 
+import ch.qos.logback.classic.PatternLayout;
 import ch.qos.logback.classic.spi.IThrowableProxy;
 import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.classic.spi.StackTraceElementProxy;
+import ch.qos.logback.core.Context;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import org.slf4j.event.KeyValuePair;
 
 import java.time.Instant;
 import java.time.ZoneId;
@@ -27,28 +30,52 @@ final class BulkPayloadBuilder {
             "@timestamp", "app", "env", "instance_id", "host", "level", "thread", "logger", "message"
     );
 
+    private final Context context;
     private final ObjectMapper objectMapper;
     private final String indexPattern;
     private final String app;
     private final String env;
     private final String instanceId;
     private final String timestampZone;
+    private final String timestampFormat;
+    private final String operation;
     private final boolean includeMdc;
+    private final boolean includeKvp;
+    private final boolean includeCallerData;
+    private final boolean rawJsonMessage;
+    private final int maxMessageSize;
+    private final List<PropertyEncoder> properties;
 
-    BulkPayloadBuilder(ObjectMapper objectMapper,
+    BulkPayloadBuilder(Context context,
+                       ObjectMapper objectMapper,
                        String indexPattern,
                        String app,
                        String env,
                        String instanceId,
                        String timestampZone,
-                       boolean includeMdc) {
+                       String timestampFormat,
+                       String operation,
+                       boolean includeMdc,
+                       boolean includeKvp,
+                       boolean includeCallerData,
+                       boolean rawJsonMessage,
+                       int maxMessageSize,
+                       OpenSearchProperties properties) {
+        this.context = context;
         this.objectMapper = objectMapper;
         this.indexPattern = indexPattern;
         this.app = app;
         this.env = env;
         this.instanceId = instanceId;
         this.timestampZone = timestampZone == null || timestampZone.isBlank() ? "UTC" : timestampZone;
+        this.timestampFormat = timestampFormat;
+        this.operation = operation == null || operation.isBlank() ? "index" : operation.toLowerCase();
         this.includeMdc = includeMdc;
+        this.includeKvp = includeKvp;
+        this.includeCallerData = includeCallerData;
+        this.rawJsonMessage = rawJsonMessage;
+        this.maxMessageSize = maxMessageSize;
+        this.properties = createPropertyEncoders(properties);
     }
 
     List<BulkItem> buildItems(List<ILoggingEvent> events) throws JsonProcessingException {
@@ -62,12 +89,7 @@ final class BulkPayloadBuilder {
     BulkItem buildItem(ILoggingEvent event) throws JsonProcessingException {
         ObjectNode source = objectMapper.createObjectNode();
         String index = resolveIndex(event);
-
-        String formattedTimestamp = DateTimeFormatter.ISO_OFFSET_DATE_TIME
-                .withZone(resolveZone())
-                .format(Instant.ofEpochMilli(event.getTimeStamp()));
-
-        source.put("@timestamp", formattedTimestamp);
+        putTimestamp(source, event);
         putIfNotBlank(source, "app", app);
         putIfNotBlank(source, "env", env);
         putIfNotBlank(source, "instance_id", instanceId);
@@ -75,12 +97,15 @@ final class BulkPayloadBuilder {
         putIfNotBlank(source, "level", event.getLevel() == null ? null : event.getLevel().toString());
         putIfNotBlank(source, "thread", event.getThreadName());
         putIfNotBlank(source, "logger", event.getLoggerName());
-        putIfNotBlank(source, "message", event.getFormattedMessage());
+        putMessage(source, event.getFormattedMessage());
 
         if (event.getThrowableProxy() != null) {
             putIfNotBlank(source, "exception_class", event.getThrowableProxy().getClassName());
             putIfNotBlank(source, "exception_message", event.getThrowableProxy().getMessage());
             putIfNotBlank(source, "stack_trace", stackTrace(event.getThrowableProxy()));
+        }
+        if (includeCallerData) {
+            appendCallerData(source, event);
         }
 
         if (includeMdc) {
@@ -104,9 +129,20 @@ final class BulkPayloadBuilder {
                 }
             }
         }
+        if (includeKvp && event.getKeyValuePairs() != null) {
+            for (KeyValuePair pair : event.getKeyValuePairs()) {
+                if (pair == null || pair.key == null || pair.key.isBlank() || FIXED_DOC_FIELDS.contains(pair.key)) {
+                    continue;
+                }
+                source.putPOJO(pair.key, pair.value);
+            }
+        }
+        for (PropertyEncoder property : properties) {
+            property.write(source, event);
+        }
 
         ObjectNode actionNode = objectMapper.createObjectNode();
-        actionNode.putObject("index").put("_index", index);
+        actionNode.putObject(operation).put("_index", index);
         String action = objectMapper.writeValueAsString(actionNode);
         String document = objectMapper.writeValueAsString(source);
         return new BulkItem(index, action, document, event);
@@ -132,6 +168,60 @@ final class BulkPayloadBuilder {
             return Boolean.parseBoolean(value);
         }
         return value;
+    }
+
+    private void putTimestamp(ObjectNode source, ILoggingEvent event) {
+        Instant instant = Instant.ofEpochMilli(event.getTimeStamp());
+        if ("long".equalsIgnoreCase(timestampFormat)) {
+            source.put("@timestamp", event.getTimeStamp());
+            return;
+        }
+        if (timestampFormat != null && !timestampFormat.isBlank()) {
+            String formatted = DateTimeFormatter.ofPattern(timestampFormat)
+                    .withZone(resolveZone())
+                    .format(instant);
+            source.put("@timestamp", formatted);
+            return;
+        }
+        String formattedTimestamp = DateTimeFormatter.ISO_OFFSET_DATE_TIME
+                .withZone(resolveZone())
+                .format(instant);
+        source.put("@timestamp", formattedTimestamp);
+    }
+
+    private void putMessage(ObjectNode source, String message) throws JsonProcessingException {
+        String effective = truncateMessage(message);
+        if (!rawJsonMessage) {
+            putIfNotBlank(source, "message", effective);
+            return;
+        }
+        if (effective == null || effective.isBlank()) {
+            return;
+        }
+        try {
+            source.set("message", objectMapper.readTree(effective));
+        } catch (Exception ignored) {
+            source.put("message", effective);
+        }
+    }
+
+    private String truncateMessage(String message) {
+        if (message == null || maxMessageSize <= 0 || message.length() <= maxMessageSize) {
+            return message;
+        }
+        return message.substring(0, maxMessageSize) + "..";
+    }
+
+    private void appendCallerData(ObjectNode source, ILoggingEvent event) {
+        StackTraceElement[] callerData = event.getCallerData();
+        if (callerData == null || callerData.length == 0 || callerData[0] == null) {
+            return;
+        }
+        StackTraceElement caller = callerData[0];
+        putIfNotBlank(source, "caller_class", caller.getClassName());
+        putIfNotBlank(source, "caller_method", caller.getMethodName());
+        putIfNotBlank(source, "caller_file", caller.getFileName());
+        source.put("caller_line", caller.getLineNumber());
     }
 
     private String resolveIndex(ILoggingEvent event) {
@@ -183,6 +273,63 @@ final class BulkPayloadBuilder {
     private void putIfNotBlank(ObjectNode node, String key, String value) {
         if (value != null && !value.isBlank()) {
             node.put(key, value);
+        }
+    }
+
+    private List<PropertyEncoder> createPropertyEncoders(OpenSearchProperties properties) {
+        if (properties == null || properties.getProperties().isEmpty()) {
+            return List.of();
+        }
+        List<PropertyEncoder> encoders = new ArrayList<>();
+        for (OpenSearchProperty property : properties.getProperties()) {
+            if (property == null || property.getName() == null || property.getName().isBlank()) {
+                continue;
+            }
+            PatternLayout layout = new PatternLayout();
+            layout.setContext(context);
+            layout.setPattern(property.getValue() == null ? "" : property.getValue());
+            layout.start();
+            encoders.add(new PropertyEncoder(property, layout));
+        }
+        return encoders;
+    }
+
+    private static final class PropertyEncoder {
+        private final OpenSearchProperty property;
+        private final PatternLayout layout;
+
+        private PropertyEncoder(OpenSearchProperty property, PatternLayout layout) {
+            this.property = property;
+            this.layout = layout;
+        }
+
+        private void write(ObjectNode node, ILoggingEvent event) {
+            String encoded = layout.doLayout(event);
+            if (encoded == null) {
+                return;
+            }
+            if (!property.isAllowEmpty() && encoded.isBlank()) {
+                return;
+            }
+            String value = encoded.endsWith(System.lineSeparator())
+                    ? encoded.substring(0, encoded.length() - System.lineSeparator().length())
+                    : encoded;
+            switch (property.getType()) {
+                case INT -> {
+                    try {
+                        node.put(property.getName(), Long.parseLong(value.trim()));
+                    } catch (NumberFormatException ignored) {
+                    }
+                }
+                case FLOAT -> {
+                    try {
+                        node.put(property.getName(), Double.parseDouble(value.trim()));
+                    } catch (NumberFormatException ignored) {
+                    }
+                }
+                case BOOLEAN -> node.put(property.getName(), Boolean.parseBoolean(value.trim()));
+                case STRING -> node.put(property.getName(), value);
+            }
         }
     }
 

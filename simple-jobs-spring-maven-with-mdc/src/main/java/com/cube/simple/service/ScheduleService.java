@@ -2,6 +2,7 @@ package com.cube.simple.service;
 
 import java.util.UUID;
 
+import org.slf4j.MDC;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.retry.annotation.Backoff;
 import org.springframework.retry.annotation.Recover;
@@ -19,26 +20,39 @@ public class ScheduleService {
 	@Retryable(retryFor = Exception.class, maxAttempts = 3, backoff = @Backoff(delay = 1000))
 	@Scheduled(fixedDelayString = "${job.system.delay:3000}")
 	public void doSystemJob() {
-		String message = String.format("OS : Just do system job by spring maven [%s]", UUID.randomUUID());
-		log.info(message);
+		logJobWithMdc("system", "platform", "spring-maven-with-mdc");
 	}
 
 	@Retryable(retryFor = Exception.class, maxAttempts = 3, backoff = @Backoff(delay = 1000))
 	@Scheduled(fixedDelayString = "${job.manager.delay:15000}")
 	public void doManagerJob() {
-		String message = String.format("OS : Just do manager job by spring maven [%s]", UUID.randomUUID());
-		log.info(message);
+		logJobWithMdc("manager", "control", "spring-maven-with-mdc");
 	}
 
 	@Retryable(retryFor = Exception.class, maxAttempts = 3, backoff = @Backoff(delay = 1000))
 	@Scheduled(fixedDelayString = "${job.operator.delay:20000}")
 	public void doOperatorJob() {
-		String message = String.format("OS : Just do operator job by spring maven [%s]", UUID.randomUUID());
-		log.info(message);
+		logJobWithMdc("operator", "runtime", "spring-maven-with-mdc");
 	}
 
 	@Recover
 	public void recoverJob(Exception e) {
-		log.error("OS : scheduled job failed after retries - {}", e.getMessage(), e);
+		log.error("OS+MDC : scheduled job failed after retries - {}", e.getMessage(), e);
+	}
+
+	private void logJobWithMdc(String jobName, String jobRole, String framework) {
+		String runId = UUID.randomUUID().toString();
+		MDC.put("traceId", runId);
+		MDC.put("jobName", jobName);
+		MDC.put("jobRole", jobRole);
+		MDC.put("framework", framework);
+		MDC.put("appVariant", "with-mdc");
+		MDC.put("mdcSample", "enabled");
+		try {
+			String message = String.format("OS+MDC : Just do %s job by spring maven with MDC [%s]", jobName, runId);
+			log.info(message);
+		} finally {
+			MDC.clear();
+		}
 	}
 }

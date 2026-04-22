@@ -3,6 +3,8 @@ package com.cube.opensearch;
 import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.core.UnsynchronizedAppenderBase;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -23,6 +25,8 @@ public abstract class AbstractOpenSearchAppender extends UnsynchronizedAppenderB
     private String app;
     private String env;
     private int maxBatchBytes = 256 * 1024;
+    private int maxBatchSize = 200;
+    private int maxMessageSize = 32 * 1024;
     private int flushIntervalSeconds = 3;
     private int queueSize = 10_000;
     private int connectTimeoutMillis = 3_000;
@@ -35,7 +39,18 @@ public abstract class AbstractOpenSearchAppender extends UnsynchronizedAppenderB
     private String deadLetterLoggerName = "com.cube.opensearch.deadletter";
     private String instanceId;
     private String timestampZone = "UTC";
+    private String timestampFormat;
+    private String operation = "index";
     private boolean includeMdc = true;
+    private boolean includeKvp = false;
+    private boolean includeCallerData = false;
+    private boolean rawJsonMessage = false;
+    private boolean logsToStderr = false;
+    private boolean errorsToStderr = false;
+    private String loggerName;
+    private String errorLoggerName;
+    private OpenSearchHeaders headers;
+    private OpenSearchProperties properties;
 
     private BlockingQueue<ILoggingEvent> queue;
     private Thread writerThread;
@@ -60,13 +75,21 @@ public abstract class AbstractOpenSearchAppender extends UnsynchronizedAppenderB
         String resolvedInstanceId = firstNonBlank(instanceId, OpenSearchSender.resolveInstanceId());
         this.queue = new ArrayBlockingQueue<>(Math.max(100, queueSize));
         this.payloadBuilder = new BulkPayloadBuilder(
+                getContext(),
                 objectMapper,
                 index,
                 firstNonBlank(app, "unknown-app"),
                 firstNonBlank(env, "default"),
                 resolvedInstanceId,
                 timestampZone,
-                includeMdc
+                timestampFormat,
+                operation,
+                includeMdc,
+                includeKvp,
+                includeCallerData,
+                rawJsonMessage,
+                maxMessageSize,
+                properties
         );
         this.sender = new OpenSearchSender(
                 objectMapper,
@@ -75,7 +98,8 @@ public abstract class AbstractOpenSearchAppender extends UnsynchronizedAppenderB
                 password,
                 connectTimeoutMillis,
                 readTimeoutMillis,
-                trustAllSsl
+                trustAllSsl,
+                headers
         );
         this.deadLetterHandler = new Slf4jDeadLetterHandler(deadLetterLoggerName);
         running.set(true);
@@ -109,6 +133,9 @@ public abstract class AbstractOpenSearchAppender extends UnsynchronizedAppenderB
             return;
         }
         eventObject.prepareForDeferredProcessing();
+        if (includeCallerData) {
+            eventObject.getCallerData();
+        }
         if (!queue.offer(eventObject)) {
             addWarn("OpenSearch queue is full. dropping log event.");
         }
@@ -134,6 +161,18 @@ public abstract class AbstractOpenSearchAppender extends UnsynchronizedAppenderB
             addWarn("maxBatchBytes <= 0. using default 262144");
             maxBatchBytes = 256 * 1024;
         }
+        if (maxBatchSize < 0) {
+            addWarn("maxBatchSize < 0. using default 200");
+            maxBatchSize = 200;
+        }
+        if (maxMessageSize < 0) {
+            addWarn("maxMessageSize < 0. using default 32768");
+            maxMessageSize = 32 * 1024;
+        }
+        if (!"index".equalsIgnoreCase(operation) && !"create".equalsIgnoreCase(operation)) {
+            addWarn("operation must be index or create. using default index");
+            operation = "index";
+        }
         return valid;
     }
 
@@ -150,7 +189,8 @@ public abstract class AbstractOpenSearchAppender extends UnsynchronizedAppenderB
 
                 boolean timeToFlush = (System.currentTimeMillis() - lastFlushAt) >= (flushIntervalSeconds * 1000L);
                 boolean sizeToFlush = estimateBytes(batch) >= maxBatchBytes;
-                if (!batch.isEmpty() && (timeToFlush || sizeToFlush)) {
+                boolean countToFlush = maxBatchSize > 0 && batch.size() >= maxBatchSize;
+                if (!batch.isEmpty() && (timeToFlush || sizeToFlush || countToFlush)) {
                     sendWithRetry(new ArrayList<>(batch));
                     batch.clear();
                     lastFlushAt = System.currentTimeMillis();
@@ -173,6 +213,7 @@ public abstract class AbstractOpenSearchAppender extends UnsynchronizedAppenderB
             List<BulkPayloadBuilder.BulkItem> items = payloadBuilder.buildItems(events);
             attemptSend(items);
         } catch (Exception e) {
+            reportFailure("Failed to build/send OpenSearch batch", e);
             addError("Failed to build/send OpenSearch batch", e);
         }
     }
@@ -182,17 +223,20 @@ public abstract class AbstractOpenSearchAppender extends UnsynchronizedAppenderB
         for (int attempt = 0; attempt <= retryPolicy.maxRetries(); attempt++) {
             try {
                 String payload = payloadBuilder.buildPayload(current);
+                mirrorPayload(payload);
                 SendResult result = sender.send(current, payload, retryPolicy.retryPartialFailures());
                 if (result.isSuccess()) {
                     return;
                 }
                 if (result.retryableItems().isEmpty()) {
+                    reportFailure("OpenSearch fatal failure: " + result.message(), result.cause());
                     deadLetterHandler.store(current, result.message(), result.cause());
                     addWarn("OpenSearch fatal failure: " + result.message());
                     return;
                 }
                 current = result.retryableItems();
                 if (attempt >= retryPolicy.maxRetries()) {
+                    reportFailure("OpenSearch retry exhausted: " + result.message(), result.cause());
                     deadLetterHandler.store(current, result.message(), result.cause());
                     addWarn("OpenSearch retry exhausted: " + result.message());
                     return;
@@ -201,9 +245,11 @@ public abstract class AbstractOpenSearchAppender extends UnsynchronizedAppenderB
                 Thread.sleep(delay);
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
+                reportFailure("Interrupted during retry", e);
                 deadLetterHandler.store(current, "Interrupted during retry", e);
                 return;
             } catch (Exception e) {
+                reportFailure("Unexpected send failure", e);
                 deadLetterHandler.store(current, "Unexpected send failure", e);
                 return;
             }
@@ -241,6 +287,37 @@ public abstract class AbstractOpenSearchAppender extends UnsynchronizedAppenderB
         return null;
     }
 
+    private void mirrorPayload(String payload) {
+        if (payload == null || payload.isBlank()) {
+            return;
+        }
+        if (logsToStderr) {
+            System.err.println(payload);
+        }
+        if (loggerName != null && !loggerName.isBlank()) {
+            Logger logger = LoggerFactory.getLogger(loggerName);
+            logger.info(payload);
+        }
+    }
+
+    private void reportFailure(String message, Throwable cause) {
+        if (errorsToStderr) {
+            if (cause == null) {
+                System.err.println(message);
+            } else {
+                System.err.println(message + " - " + cause.getMessage());
+            }
+        }
+        if (errorLoggerName != null && !errorLoggerName.isBlank()) {
+            Logger logger = LoggerFactory.getLogger(errorLoggerName);
+            if (cause == null) {
+                logger.error(message);
+            } else {
+                logger.error(message, cause);
+            }
+        }
+    }
+
     public void setUrl(String url) { this.url = url; }
     public void setIndex(String index) { this.index = index; }
     public void setUsername(String username) { this.username = username; }
@@ -248,6 +325,8 @@ public abstract class AbstractOpenSearchAppender extends UnsynchronizedAppenderB
     public void setApp(String app) { this.app = app; }
     public void setEnv(String env) { this.env = env; }
     public void setMaxBatchBytes(int maxBatchBytes) { this.maxBatchBytes = maxBatchBytes; }
+    public void setMaxBatchSize(int maxBatchSize) { this.maxBatchSize = maxBatchSize; }
+    public void setMaxMessageSize(int maxMessageSize) { this.maxMessageSize = maxMessageSize; }
     public void setFlushIntervalSeconds(int flushIntervalSeconds) { this.flushIntervalSeconds = flushIntervalSeconds; }
     public void setQueueSize(int queueSize) { this.queueSize = queueSize; }
     public void setConnectTimeoutMillis(int connectTimeoutMillis) { this.connectTimeoutMillis = connectTimeoutMillis; }
@@ -260,5 +339,16 @@ public abstract class AbstractOpenSearchAppender extends UnsynchronizedAppenderB
     public void setDeadLetterLoggerName(String deadLetterLoggerName) { this.deadLetterLoggerName = deadLetterLoggerName; }
     public void setInstanceId(String instanceId) { this.instanceId = instanceId; }
     public void setTimestampZone(String timestampZone) { this.timestampZone = timestampZone; }
+    public void setTimestampFormat(String timestampFormat) { this.timestampFormat = timestampFormat; }
+    public void setOperation(String operation) { this.operation = operation; }
     public void setIncludeMdc(boolean includeMdc) { this.includeMdc = includeMdc; }
+    public void setIncludeKvp(boolean includeKvp) { this.includeKvp = includeKvp; }
+    public void setIncludeCallerData(boolean includeCallerData) { this.includeCallerData = includeCallerData; }
+    public void setRawJsonMessage(boolean rawJsonMessage) { this.rawJsonMessage = rawJsonMessage; }
+    public void setLogsToStderr(boolean logsToStderr) { this.logsToStderr = logsToStderr; }
+    public void setErrorsToStderr(boolean errorsToStderr) { this.errorsToStderr = errorsToStderr; }
+    public void setLoggerName(String loggerName) { this.loggerName = loggerName; }
+    public void setErrorLoggerName(String errorLoggerName) { this.errorLoggerName = errorLoggerName; }
+    public void setHeaders(OpenSearchHeaders headers) { this.headers = headers; }
+    public void setProperties(OpenSearchProperties properties) { this.properties = properties; }
 }

@@ -202,6 +202,8 @@ npm run dev          # 개발 서버
 |---|---|---|---|
 | `simple-jobs-spring-maven`  | Spring Boot 3.5 | - | Maven |
 | `simple-jobs-spring-gradle` | Spring Boot 3.5 | - | Gradle |
+| `simple-jobs-spring-maven-with-mdc`  | Spring Boot 3.5 + MDC 예제 | - | Maven |
+| `simple-jobs-spring-gradle-with-mdc` | Spring Boot 3.5 + MDC 예제 | - | Gradle |
 | `simple-jobs-node-express`  | Node.js / Express | - | npm |
 | `simple-jobs-node-fastify`  | Node.js / Fastify | - | npm |
 | `simple-jobs-node-nestjs`   | Node.js / NestJS  | - | npm |
@@ -215,8 +217,16 @@ npm run dev          # 개발 서버
 cd simple-jobs-spring-maven
 ./mvnw spring-boot:run
 
+# Maven + MDC
+cd simple-jobs-spring-maven-with-mdc
+./mvnw spring-boot:run
+
 # Gradle
 cd simple-jobs-spring-gradle
+./gradlew bootRun
+
+# Gradle + MDC
+cd simple-jobs-spring-gradle-with-mdc
 ./gradlew bootRun
 ```
 
@@ -410,9 +420,13 @@ opensearch.url=https://localhost:9200
 opensearch.username=admin
 opensearch.password=Demo3543##
 opensearch.batch.max-bytes=1000000
+opensearch.batch.max-size=200
+opensearch.batch.max-message-size=32768
 opensearch.batch.flush-interval-seconds=1
 opensearch.batch.queue-size=8192
 opensearch.trust-all-ssl=true
+opensearch.include-kvp=true
+opensearch.operation=create
 ```
 
 **④ SSL TrustAll (내부망 자가 서명 인증서 대응, 1.1.0/1.2.0 기본 정책)**
