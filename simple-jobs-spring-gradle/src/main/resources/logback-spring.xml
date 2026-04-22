@@ -11,6 +11,15 @@
     <springProperty scope="context" name="OPENSEARCH_MAX_BYTES"     source="opensearch.batch.max-bytes"              defaultValue="1000000"/>
     <springProperty scope="context" name="OPENSEARCH_FLUSH_INTERVAL" source="opensearch.batch.flush-interval-seconds" defaultValue="1"/>
     <springProperty scope="context" name="OPENSEARCH_QUEUE_SIZE"    source="opensearch.batch.queue-size"             defaultValue="8192"/>
+    <springProperty scope="context" name="OPENSEARCH_CONNECT_TIMEOUT" source="opensearch.connect-timeout-millis"      defaultValue="3000"/>
+    <springProperty scope="context" name="OPENSEARCH_READ_TIMEOUT"  source="opensearch.read-timeout-millis"          defaultValue="5000"/>
+    <springProperty scope="context" name="OPENSEARCH_RETRY_INITIAL_DELAY" source="opensearch.retry-initial-delay-millis" defaultValue="500"/>
+    <springProperty scope="context" name="OPENSEARCH_RETRY_MAX_DELAY" source="opensearch.retry-max-delay-millis"     defaultValue="10000"/>
+    <springProperty scope="context" name="OPENSEARCH_MAX_RETRIES"   source="opensearch.max-retries"                  defaultValue="3"/>
+    <springProperty scope="context" name="OPENSEARCH_RETRY_PARTIAL_FAILURES" source="opensearch.retry-partial-failures" defaultValue="true"/>
+    <springProperty scope="context" name="OPENSEARCH_TRUST_ALL_SSL" source="opensearch.trust-all-ssl"                defaultValue="true"/>
+    <springProperty scope="context" name="OPENSEARCH_TIMESTAMP_ZONE" source="opensearch.timestamp-zone"              defaultValue="UTC"/>
+    <springProperty scope="context" name="OPENSEARCH_INCLUDE_MDC"   source="opensearch.include-mdc"                  defaultValue="true"/>
 
     <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
         <encoder>
@@ -31,7 +40,7 @@
     </appender>
 
     <appender name="OPENSEARCH" class="com.cube.opensearch.OpenSearchJobAppender">
-        <url>${OPENSEARCH_URL}/_bulk</url>
+        <url>${OPENSEARCH_URL}</url>
         <index>logs-${OPENSEARCH_NAME}-%date{yyyy.MM.dd}</index>
         <username>${OPENSEARCH_USER}</username>
         <password>${OPENSEARCH_PASS}</password>
@@ -40,6 +49,15 @@
         <queueSize>${OPENSEARCH_QUEUE_SIZE}</queueSize>
         <maxBatchBytes>${OPENSEARCH_MAX_BYTES}</maxBatchBytes>
         <flushIntervalSeconds>${OPENSEARCH_FLUSH_INTERVAL}</flushIntervalSeconds>
+        <connectTimeoutMillis>${OPENSEARCH_CONNECT_TIMEOUT}</connectTimeoutMillis>
+        <readTimeoutMillis>${OPENSEARCH_READ_TIMEOUT}</readTimeoutMillis>
+        <retryInitialDelayMillis>${OPENSEARCH_RETRY_INITIAL_DELAY}</retryInitialDelayMillis>
+        <retryMaxDelayMillis>${OPENSEARCH_RETRY_MAX_DELAY}</retryMaxDelayMillis>
+        <maxRetries>${OPENSEARCH_MAX_RETRIES}</maxRetries>
+        <retryPartialFailures>${OPENSEARCH_RETRY_PARTIAL_FAILURES}</retryPartialFailures>
+        <trustAllSsl>${OPENSEARCH_TRUST_ALL_SSL}</trustAllSsl>
+        <timestampZone>${OPENSEARCH_TIMESTAMP_ZONE}</timestampZone>
+        <includeMdc>${OPENSEARCH_INCLUDE_MDC}</includeMdc>
     </appender>
 
     <root level="INFO">

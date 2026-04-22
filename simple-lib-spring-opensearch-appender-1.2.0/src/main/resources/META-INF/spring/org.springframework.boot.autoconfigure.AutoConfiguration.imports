@@ -1,2 +1,2 @@
-com.cube.opensearch.OpenSearchJobAutoConfiguration
 com.cube.opensearch.OpenSearchWebAutoConfiguration
+com.cube.opensearch.OpenSearchJobAutoConfiguration
