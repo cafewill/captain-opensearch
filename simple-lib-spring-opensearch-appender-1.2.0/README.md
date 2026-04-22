@@ -14,6 +14,8 @@
 ## 1.2.0 추가점
 - `timestampZone` setter 추가
 - `includeMdc` setter 추가
+- `maxBatchSize`, `maxMessageSize`, `operation`, `includeKvp`, `errorsToStderr` setter 추가
+- `<headers>` / `<properties>` 중첩 설정 지원 추가
 - `@timestamp`를 `UTC`, `Asia/Seoul` 등 `ZoneId`로 제어 가능
 - 기존 설정이 없으면 기본값으로 동작하도록 보강
 
@@ -26,8 +28,22 @@
 - `opensearch.timestamp-zone=UTC`
 - `opensearch.include-mdc=true`
 - `opensearch.trust-all-ssl=true`
+- `opensearch.max-batch-size=200`
+- `opensearch.max-message-size=32768`
+- `opensearch.include-kvp=true`
+- `opensearch.operation=create`
+- `opensearch.errors-to-stderr=true`
 
 셋 다 생략해도 동작합니다.
+
+## 3.0.19 대비 반영한 핵심 축
+- `_bulk` 응답의 partial failure 분석 및 retry/fatal 분기
+- 배치 바이트 제한과 배치 건수 제한 동시 지원
+- 메시지 길이 제한(`maxMessageSize`) 지원
+- `create` / `index` operation 선택 지원
+- MDC 외에 SLF4J KeyValuePair(`includeKvp`) 적재 지원
+- Logback pattern 기반 custom property 적재 지원
+- HTTP request header 추가 지원
 
 ## 하위호환성 정책
 기존 `application.properties` / `logback-spring.xml`에서 쓰던 값만 있어도 실행에 문제 없도록 기본값을 유지했습니다.

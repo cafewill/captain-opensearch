@@ -31,6 +31,7 @@ final class OpenSearchSender {
     private final int connectTimeoutMillis;
     private final int readTimeoutMillis;
     private final SSLSocketFactory sslSocketFactory;
+    private final OpenSearchHeaders headers;
 
     OpenSearchSender(ObjectMapper objectMapper,
                      String url,
@@ -38,13 +39,15 @@ final class OpenSearchSender {
                      String password,
                      int connectTimeoutMillis,
                      int readTimeoutMillis,
-                     boolean trustAllSsl) {
+                     boolean trustAllSsl,
+                     OpenSearchHeaders headers) {
         this.objectMapper = objectMapper;
         this.url = trimTrailingSlash(url);
         this.connectTimeoutMillis = connectTimeoutMillis;
         this.readTimeoutMillis = readTimeoutMillis;
         this.basicAuth = buildBasicAuth(username, password);
         this.sslSocketFactory = trustAllSsl ? buildTrustAllFactory() : null;
+        this.headers = headers;
     }
 
     SendResult send(List<BulkPayloadBuilder.BulkItem> items, String payload, boolean retryPartialFailures) {
@@ -58,6 +61,7 @@ final class OpenSearchSender {
             if (basicAuth != null) {
                 connection.setRequestProperty("Authorization", basicAuth);
             }
+            applyHeaders(connection);
             connection.setDoOutput(true);
 
             try (OutputStream os = connection.getOutputStream()) {
@@ -134,7 +138,11 @@ final class OpenSearchSender {
         StringBuilder fatalMessages = new StringBuilder();
 
         for (int i = 0; i < responseItems.size() && i < items.size(); i++) {
-            JsonNode node = responseItems.get(i).path("index");
+            JsonNode itemNode = responseItems.get(i);
+            JsonNode node = itemNode.path("index");
+            if (node.isMissingNode()) {
+                node = itemNode.path("create");
+            }
             int status = node.path("status").asInt(200);
             if (status == 429 || status >= 500) {
                 retryable.add(items.get(i));
@@ -153,10 +161,25 @@ final class OpenSearchSender {
         if (!retryable.isEmpty() && retryPartialFailures) {
             return SendResult.retryable(retryable, "partial retryable: " + fatalMessages, null);
         }
+        if (!retryable.isEmpty()) {
+            return SendResult.fatal("partial retryable but retry disabled", null);
+        }
         if (!fatalMessages.isEmpty()) {
             return SendResult.fatal(fatalMessages.toString().trim(), null);
         }
         return SendResult.success();
+    }
+
+    private void applyHeaders(HttpURLConnection connection) {
+        if (headers == null || headers.getHeaders().isEmpty()) {
+            return;
+        }
+        for (OpenSearchHeader header : headers.getHeaders()) {
+            if (header == null || header.getName() == null || header.getName().isBlank()) {
+                continue;
+            }
+            connection.setRequestProperty(header.getName(), header.getValue() == null ? "" : header.getValue());
+        }
     }
 
     private SSLSocketFactory buildTrustAllFactory() {
