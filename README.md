@@ -375,8 +375,8 @@ python main.py
 
 | 앱 유형 | 기술 스택 | Appender 파일 |
 |---|---|---|
-| 배치잡 | Spring Boot | `simple-lib-spring-opensearch-appender-1.2.0/.../OpenSearchJobAppender.java` |
-| REST API | Spring Boot | `simple-lib-spring-opensearch-appender-1.2.0/.../OpenSearchWebAppender.java` |
+| 배치잡 | Spring Boot | `simple-lib-spring-opensearch-appender-2.0.0/.../OpenSearchJobAppender.java` |
+| REST API | Spring Boot | `simple-lib-spring-opensearch-appender-2.0.0/.../OpenSearchWebAppender.java` |
 | 배치잡 | Node.js | `src/opensearch-job-appender.js` (또는 `.ts`) |
 | REST API | Node.js | `src/opensearch-web-appender.js` (또는 `.ts`) |
 | 배치잡 | Python | `simple-lib-python-opensearch-appender/opensearch_appender/job_appender.py` |
@@ -483,7 +483,7 @@ sc.init(null, new TrustManager[]{ new X509TrustManager() {
 ```
 
 > 이 프로젝트는 루트 제약 조건대로 내부망 VM / 자가 서명 인증서를 기본 전제로 둔다.  
-> 따라서 Spring Boot appender `1.2.0`도 `trustAllSsl=true`를 기본값으로 유지한다.  
+> 따라서 Spring Boot appender `2.0.0`도 `trustAllSsl=true`를 기본값으로 유지한다.  
 > 외부망 또는 공인 인증서 환경에서는 `opensearch.trust-all-ssl=false`로 명시적으로 끄면 된다.
 
 **⑤ MdcJobFilter (배치잡) — 스케줄러 스레드 MDC 자동 설정**
