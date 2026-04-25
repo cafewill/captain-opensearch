@@ -1,4 +1,4 @@
 fastapi==0.115.12
 uvicorn==0.34.2
 python-dotenv==1.1.0
-../lib/simple-lib-python-opensearch-appender-1.0.0
+../lib/simple-lib-python-opensearch-appender-bulk-only-3.0.0

@@ -156,14 +156,17 @@ cd ../simple-rest-spring-gradle && ./gradlew build -x test -q
 | 디렉터리 | 패키지명 | version |
 |---|---|---|
 | `lib/simple-lib-python-opensearch-appender-1.0.0` | `opensearch-appender` | `1.0.0` |
+| `lib/simple-lib-python-opensearch-appender-bulk-only-3.0.0` | `opensearch-appender-bulk-only` | `3.0.0` |
 
 Python 배치잡/REST API 앱이 공통으로 사용하는 OpenSearch Appender 라이브러리.  
 PyPI에 배포되지 않으므로 **개발자 로컬 환경에 직접 설치**해야 한다.  
 설치 후 각 Python 앱이 일반 패키지처럼 `import` 할 수 있다.
 
+`bulk-only` 변형은 import 패키지명과 클래스명을 기존과 동일하게 유지하되 `_bulk` 작업을 `index` / `create` 액션으로만 제한하고, 응답 item별 partial failure 분석과 retry 설정을 지원한다.
+
 #### 설치 방법
 
-각 소비 앱의 `requirements.txt` 에 `../lib/simple-lib-python-opensearch-appender-1.0.0` 가 포함되어 있으므로  
+각 Python 소비 앱의 `requirements.txt` 에 `../lib/simple-lib-python-opensearch-appender-bulk-only-3.0.0` 가 포함되어 있으므로  
 **별도 설치 없이** 앱 디렉터리에서 `pip install -r requirements.txt` 하나로 완결된다.
 
 ```bash
@@ -197,7 +200,7 @@ from opensearch_appender.web_appender_fastapi import OpenSearchWebAppender
 
 ```bash
 # 각 소비 앱 가상환경에서 재설치
-pip install --force-reinstall ../lib/simple-lib-python-opensearch-appender-1.0.0
+pip install --force-reinstall ../lib/simple-lib-python-opensearch-appender-bulk-only-3.0.0
 ```
 
 ---
@@ -316,7 +319,7 @@ npm install && npm run start:dev
 # Flask + APScheduler
 cd simple-jobs-python-flask
 python -m venv venv && source venv/bin/activate   # Windows: venv\Scripts\activate
-pip install -r requirements.txt                   # ../lib/simple-lib-python-opensearch-appender-1.0.0 포함
+pip install -r requirements.txt                   # ../lib/simple-lib-python-opensearch-appender-bulk-only-3.0.0 포함
 python main.py
 
 # FastAPI + APScheduler
@@ -386,7 +389,7 @@ npm install && npm start
 # Flask / waitress (포트 5201)
 cd simple-rest-python-flask
 python -m venv venv && source venv/bin/activate
-pip install -r requirements.txt                   # ../lib/simple-lib-python-opensearch-appender-1.0.0 포함
+pip install -r requirements.txt                   # ../lib/simple-lib-python-opensearch-appender-bulk-only-3.0.0 포함
 python main.py
 
 # FastAPI / uvicorn (포트 5202)
@@ -411,9 +414,9 @@ python main.py
 | REST API | Spring Boot | `lib/simple-lib-spring-opensearch-appender-3.0.0/.../OpenSearchAppender.java` |
 | 배치잡 | Node.js | `src/opensearch-job-appender.js` (또는 `.ts`) |
 | REST API | Node.js | `src/opensearch-web-appender.js` (또는 `.ts`) |
-| 배치잡 | Python | `lib/simple-lib-python-opensearch-appender-1.0.0/opensearch_appender/job_appender.py` |
-| REST API (Flask) | Python | `lib/simple-lib-python-opensearch-appender-1.0.0/opensearch_appender/web_appender_flask.py` |
-| REST API (FastAPI) | Python | `lib/simple-lib-python-opensearch-appender-1.0.0/opensearch_appender/web_appender_fastapi.py` |
+| 배치잡 | Python | `lib/simple-lib-python-opensearch-appender-bulk-only-3.0.0/opensearch_appender/job_appender.py` |
+| REST API (Flask) | Python | `lib/simple-lib-python-opensearch-appender-bulk-only-3.0.0/opensearch_appender/web_appender_flask.py` |
+| REST API (FastAPI) | Python | `lib/simple-lib-python-opensearch-appender-bulk-only-3.0.0/opensearch_appender/web_appender_fastapi.py` |
 
 ### 2-2. Spring OpenSearchAppender 운용 방식
 
@@ -577,11 +580,14 @@ public class RequestMdcFilter extends OncePerRequestFilter {
 **.env**
 
 ```dotenv
-OPENSEARCH_SCHEME=https
-OPENSEARCH_HOST=localhost
-OPENSEARCH_PORT=9200
+OPENSEARCH_URL=https://localhost:9200
 OPENSEARCH_USERNAME=admin
 OPENSEARCH_PASSWORD=Demo3543##
+OPENSEARCH_BULK_OPERATION=create
+OPENSEARCH_TRUST_ALL_SSL=true
+OPENSEARCH_TIMEOUT=10
+OPENSEARCH_MAX_RETRIES=3
+OPENSEARCH_HEADERS={}
 ```
 
 **사용 예시 (Express)**
@@ -626,7 +632,7 @@ export class OpenSearchWebAppender {
 
 ### 2-5. Python — 설정 방법
 
-**① `lib/simple-lib-python-opensearch-appender-1.0.0` 설치 (최초 1회)**
+**① `lib/simple-lib-python-opensearch-appender-bulk-only-3.0.0` 설치 (최초 1회)**
 
 ```bash
 # 앱 디렉터리에서 실행 (requirements.txt에 경로 포함되어 있으므로 한 번에 설치됨)
@@ -634,7 +640,7 @@ cd simple-rest-python-flask
 pip install -r requirements.txt
 ```
 
-> `requirements.txt` 에 `../lib/simple-lib-python-opensearch-appender-1.0.0` 가 포함되어 있어  
+> `requirements.txt` 에 `../lib/simple-lib-python-opensearch-appender-bulk-only-3.0.0` 가 포함되어 있어  
 > 별도 설치 없이 `pip install -r requirements.txt` 하나로 완결된다.
 
 **② `.env`**
@@ -655,13 +661,13 @@ from opensearch_appender.job_appender import OpenSearchJobAppender
 import os
 
 appender = OpenSearchJobAppender(
-    scheme   = os.getenv('OPENSEARCH_SCHEME',   'https'),
-    host     = os.getenv('OPENSEARCH_HOST',     'localhost'),
-    port     = int(os.getenv('OPENSEARCH_PORT', '9200')),
-    username = os.getenv('OPENSEARCH_USERNAME', ''),
-    password = os.getenv('OPENSEARCH_PASSWORD', ''),
-    app      = 'simple-jobs-python-flask',
-    env      = 'local',
+    url         = os.getenv('OPENSEARCH_URL', 'https://localhost:9200'),
+    username    = os.getenv('OPENSEARCH_USERNAME', ''),
+    password    = os.getenv('OPENSEARCH_PASSWORD', ''),
+    app         = 'simple-jobs-python-flask',
+    env         = 'local',
+    operation   = os.getenv('OPENSEARCH_BULK_OPERATION', 'create'),
+    max_retries = int(os.getenv('OPENSEARCH_MAX_RETRIES', '3')),
 )
 
 appender.log('INFO', '배치잡 실행', job='system-job')
@@ -675,13 +681,13 @@ from opensearch_appender.web_appender_flask import OpenSearchWebAppender
 import os
 
 appender = OpenSearchWebAppender(
-    scheme   = os.getenv('OPENSEARCH_SCHEME',   'https'),
-    host     = os.getenv('OPENSEARCH_HOST',     'localhost'),
-    port     = int(os.getenv('OPENSEARCH_PORT', '9200')),
-    username = os.getenv('OPENSEARCH_USERNAME', ''),
-    password = os.getenv('OPENSEARCH_PASSWORD', ''),
-    app      = 'simple-rest-python-flask',
-    env      = 'local',
+    url         = os.getenv('OPENSEARCH_URL', 'https://localhost:9200'),
+    username    = os.getenv('OPENSEARCH_USERNAME', ''),
+    password    = os.getenv('OPENSEARCH_PASSWORD', ''),
+    app         = 'simple-rest-python-flask',
+    env         = 'local',
+    operation   = os.getenv('OPENSEARCH_BULK_OPERATION', 'create'),
+    max_retries = int(os.getenv('OPENSEARCH_MAX_RETRIES', '3')),
 )
 
 @app.before_request
@@ -720,9 +726,10 @@ serve(app, host='0.0.0.0', port=5201)
 **SSL (내부망 자가 서명 인증서 대응)**
 
 ```python
-self._ssl_ctx = ssl.create_default_context()
-self._ssl_ctx.check_hostname = False
-self._ssl_ctx.verify_mode    = ssl.CERT_NONE
+OpenSearchJobAppender(
+    url='https://localhost:9200',
+    trust_all_ssl=True,
+)
 ```
 
 ---
