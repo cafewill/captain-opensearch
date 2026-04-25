@@ -3,6 +3,7 @@ import uuid
 import asyncio
 import logging
 import random
+import json
 from contextlib import asynccontextmanager
 
 from dotenv import load_dotenv
@@ -19,6 +20,15 @@ MANAGER_DELAY  = int(os.getenv('JOB_MANAGER_DELAY',  '15000')) / 1000
 OPERATOR_DELAY = int(os.getenv('JOB_OPERATOR_DELAY', '20000')) / 1000
 RISKY_DELAY    = int(os.getenv('JOB_RISKY_DELAY',    '60000')) / 1000
 
+
+def env_bool(name, default):
+    return os.getenv(name, str(default)).lower() in ('1', 'true', 'yes', 'y')
+
+
+def env_headers():
+    return json.loads(os.getenv('OPENSEARCH_HEADERS', '{}'))
+
+
 appender = OpenSearchJobAppender(
     url=os.getenv('OPENSEARCH_URL', 'https://localhost:9200'),
     username=os.getenv('OPENSEARCH_USERNAME', ''),
@@ -28,6 +38,11 @@ appender = OpenSearchJobAppender(
     max_batch_bytes=int(os.getenv('OPENSEARCH_BATCH_MAX_BYTES', '1000000')),
     flush_interval_seconds=int(os.getenv('OPENSEARCH_BATCH_FLUSH_INTERVAL', '1')),
     queue_size=int(os.getenv('OPENSEARCH_BATCH_QUEUE_SIZE', '8192')),
+    operation=os.getenv('OPENSEARCH_BULK_OPERATION', 'create'),
+    trust_all_ssl=env_bool('OPENSEARCH_TRUST_ALL_SSL', True),
+    timeout=int(os.getenv('OPENSEARCH_TIMEOUT', '10')),
+    max_retries=int(os.getenv('OPENSEARCH_MAX_RETRIES', '3')),
+    headers=env_headers(),
 )
 
 
