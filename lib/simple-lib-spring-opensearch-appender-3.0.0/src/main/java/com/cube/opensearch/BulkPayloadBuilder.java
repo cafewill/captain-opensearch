@@ -29,10 +29,9 @@ final class BulkPayloadBuilder {
             "success", "retryable"
     );
     private static final Set<String> FIXED_DOC_FIELDS = Set.of(
-            "@timestamp", "app", "env", "instance_id", "host", "level", "thread", "logger", "message"
+            "@timestamp", "level", "thread", "logger", "message"
     );
 
-    // 3.0.0: logstash-logback-encoder ObjectAppendingMarker 런타임 옵션 로딩
     private static final Class<?> OBJECT_APPENDING_MARKER_CLASS;
     private static final Method GET_FIELD_NAME_METHOD;
     private static final Field OBJECT_FIELD;
@@ -56,10 +55,7 @@ final class BulkPayloadBuilder {
     private final Context context;
     private final ObjectMapper objectMapper;
     private final String indexPattern;
-    private final String app;
-    private final String env;
-    private final String instanceId;
-    private final String timestampZone;
+    private final String type;
     private final String timestampFormat;
     private final String operation;
     private final boolean includeMdc;
@@ -75,10 +71,7 @@ final class BulkPayloadBuilder {
     BulkPayloadBuilder(Context context,
                        ObjectMapper objectMapper,
                        String indexPattern,
-                       String app,
-                       String env,
-                       String instanceId,
-                       String timestampZone,
+                       String type,
                        String timestampFormat,
                        String operation,
                        boolean includeMdc,
@@ -93,12 +86,9 @@ final class BulkPayloadBuilder {
         this.context = context;
         this.objectMapper = objectMapper;
         this.indexPattern = indexPattern;
-        this.app = app;
-        this.env = env;
-        this.instanceId = instanceId;
-        this.timestampZone = timestampZone == null || timestampZone.isBlank() ? "UTC" : timestampZone;
+        this.type = type;
         this.timestampFormat = timestampFormat;
-        this.operation = operation == null || operation.isBlank() ? "index" : operation.toLowerCase();
+        this.operation = operation == null || operation.isBlank() ? "create" : operation.toLowerCase();
         this.includeMdc = includeMdc;
         this.includeKvp = includeKvp;
         this.includeCallerData = includeCallerData;
@@ -122,10 +112,6 @@ final class BulkPayloadBuilder {
         ObjectNode source = objectMapper.createObjectNode();
         String index = resolveIndex(event);
         putTimestamp(source, event);
-        putIfNotBlank(source, "app", app);
-        putIfNotBlank(source, "env", env);
-        putIfNotBlank(source, "instance_id", instanceId);
-        putIfNotBlank(source, "host", instanceId);
         putIfNotBlank(source, "level", event.getLevel() == null ? null : event.getLevel().toString());
         putIfNotBlank(source, "thread", event.getThreadName());
         putIfNotBlank(source, "logger", event.getLoggerName());
@@ -168,7 +154,6 @@ final class BulkPayloadBuilder {
                 source.putPOJO(pair.key, pair.value);
             }
         }
-        // 3.0.0: StructuredArgs (logstash-logback-encoder ObjectAppendingMarker)
         if (includeStructuredArgs) {
             processStructuredArgs(source, event);
         }
@@ -176,8 +161,14 @@ final class BulkPayloadBuilder {
             property.write(source, event);
         }
 
+        ObjectNode actionMeta = objectMapper.createObjectNode();
+        if (type != null && !type.isBlank()) {
+            actionMeta.put("_index", index).put("_type", type);
+        } else {
+            actionMeta.put("_index", index);
+        }
         ObjectNode actionNode = objectMapper.createObjectNode();
-        actionNode.putObject(operation).put("_index", index);
+        actionNode.set(operation, actionMeta);
         String action = objectMapper.writeValueAsString(actionNode);
         String document = objectMapper.writeValueAsString(source);
         return new BulkItem(index, action, document, event);
@@ -192,7 +183,6 @@ final class BulkPayloadBuilder {
         return payload.toString();
     }
 
-    // 3.0.0: ObjectAppendingMarker 리플렉션 처리 (logstash-logback-encoder 런타임 옵션)
     private void processStructuredArgs(ObjectNode source, ILoggingEvent event) {
         if (OBJECT_APPENDING_MARKER_CLASS == null || GET_FIELD_NAME_METHOD == null || OBJECT_FIELD == null) {
             return;
@@ -245,15 +235,14 @@ final class BulkPayloadBuilder {
         }
         if (timestampFormat != null && !timestampFormat.isBlank()) {
             String formatted = DateTimeFormatter.ofPattern(timestampFormat)
-                    .withZone(resolveZone())
+                    .withZone(ZoneId.systemDefault())
                     .format(instant);
             source.put("@timestamp", formatted);
             return;
         }
-        String formattedTimestamp = DateTimeFormatter.ISO_OFFSET_DATE_TIME
-                .withZone(resolveZone())
-                .format(instant);
-        source.put("@timestamp", formattedTimestamp);
+        source.put("@timestamp", DateTimeFormatter.ISO_OFFSET_DATE_TIME
+                .withZone(ZoneId.systemDefault())
+                .format(instant));
     }
 
     private void putMessage(ObjectNode source, String message) throws JsonProcessingException {
@@ -292,7 +281,7 @@ final class BulkPayloadBuilder {
     }
 
     private String resolveIndex(ILoggingEvent event) {
-        String date = DateTimeFormatter.ofPattern("yyyy.MM.dd").withZone(resolveZone())
+        String date = DateTimeFormatter.ofPattern("yyyy.MM.dd").withZone(ZoneId.systemDefault())
                 .format(Instant.ofEpochMilli(event.getTimeStamp()));
         if (indexPattern == null || indexPattern.isBlank()) {
             return "app-logs-" + date;
@@ -300,14 +289,6 @@ final class BulkPayloadBuilder {
         return indexPattern
                 .replace("%date{yyyy.MM.dd}", date)
                 .replace("{date}", date);
-    }
-
-    private ZoneId resolveZone() {
-        try {
-            return ZoneId.of(timestampZone);
-        } catch (Exception ignored) {
-            return ZoneId.of("UTC");
-        }
     }
 
     private String stackTrace(IThrowableProxy throwableProxy) {
