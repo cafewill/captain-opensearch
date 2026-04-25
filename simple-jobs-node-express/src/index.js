@@ -8,6 +8,7 @@ const PORT         = process.env.PORT ?? 3002;
 const SYSTEM_DELAY  = parseInt(process.env.JOB_SYSTEM_DELAY   ?? '3000');
 const MANAGER_DELAY = parseInt(process.env.JOB_MANAGER_DELAY  ?? '15000');
 const OPERATOR_DELAY = parseInt(process.env.JOB_OPERATOR_DELAY ?? '20000');
+const RISKY_DELAY = parseInt(process.env.JOB_RISKY_DELAY ?? '60000');
 
 const appender = new OpenSearchJobAppender({
   url:                  process.env.OPENSEARCH_URL                 ?? 'https://localhost:9200',
@@ -33,6 +34,10 @@ function withRetry(fn, maxAttempts = 3) {
   }
 }
 
+function riskyLogDelay() {
+  return 3000 + Math.floor(Math.random() * 7001);
+}
+
 setInterval(() => withRetry(() => {
   const msg = `OS : Just do system job by node express [${randomUUID()}]`;
   console.log(msg);
@@ -50,6 +55,23 @@ setInterval(() => withRetry(() => {
   console.log(msg);
   appender.log('INFO', msg, { job: 'operator-job' });
 }), OPERATOR_DELAY);
+
+setInterval(() => {
+  const runId = randomUUID();
+  if (Math.random() < 0.8) {
+    const msg = `OS : Risky job completed normally by node express [${runId}]`;
+    console.log(msg);
+    appender.log('INFO', msg, { job: 'risky-job' });
+    return;
+  }
+
+  setTimeout(() => {
+    const level = Math.random() < 0.5 ? 'WARN' : 'ERROR';
+    const msg = `OS : Risky job found unstable condition by node express [${runId}]`;
+    console[level === 'WARN' ? 'warn' : 'error'](msg);
+    appender.log(level, msg, { job: 'risky-job' });
+  }, riskyLogDelay());
+}, RISKY_DELAY);
 
 process.on('SIGTERM', () => { appender.stop(); process.exit(0); });
 process.on('SIGINT',  () => { appender.stop(); process.exit(0); });

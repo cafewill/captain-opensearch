@@ -2,6 +2,7 @@ import os
 import uuid
 import asyncio
 import logging
+import random
 from contextlib import asynccontextmanager
 
 from dotenv import load_dotenv
@@ -16,6 +17,7 @@ logger = logging.getLogger(__name__)
 SYSTEM_DELAY   = int(os.getenv('JOB_SYSTEM_DELAY',   '3000'))  / 1000
 MANAGER_DELAY  = int(os.getenv('JOB_MANAGER_DELAY',  '15000')) / 1000
 OPERATOR_DELAY = int(os.getenv('JOB_OPERATOR_DELAY', '20000')) / 1000
+RISKY_DELAY    = int(os.getenv('JOB_RISKY_DELAY',    '60000')) / 1000
 
 appender = OpenSearchJobAppender(
     url=os.getenv('OPENSEARCH_URL', 'https://localhost:9200'),
@@ -47,6 +49,12 @@ async def job_loop(fn, delay: float):
         await asyncio.sleep(delay)
 
 
+async def fixed_rate_job_loop(fn, delay: float):
+    while True:
+        asyncio.create_task(with_retry(fn))
+        await asyncio.sleep(delay)
+
+
 async def do_system_job():
     msg = f'OS : Just do system job by python fastapi [{uuid.uuid4()}]'
     logger.info(msg)
@@ -65,11 +73,30 @@ async def do_operator_job():
     appender.log('INFO', msg, job='operator-job')
 
 
+async def do_risky_job():
+    run_id = uuid.uuid4()
+    if random.random() < 0.8:
+        msg = f'OS : Risky job completed normally by python fastapi [{run_id}]'
+        logger.info(msg)
+        appender.log('INFO', msg, job='risky-job')
+        return
+
+    await asyncio.sleep(random.uniform(3, 10))
+    level = random.choice(('WARN', 'ERROR'))
+    msg = f'OS : Risky job found unstable condition by python fastapi [{run_id}]'
+    if level == 'WARN':
+        logger.warning(msg)
+    else:
+        logger.error(msg)
+    appender.log(level, msg, job='risky-job')
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     asyncio.create_task(job_loop(do_system_job,   SYSTEM_DELAY))
     asyncio.create_task(job_loop(do_manager_job,  MANAGER_DELAY))
     asyncio.create_task(job_loop(do_operator_job, OPERATOR_DELAY))
+    asyncio.create_task(fixed_rate_job_loop(do_risky_job, RISKY_DELAY))
     yield
 
 

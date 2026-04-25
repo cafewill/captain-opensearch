@@ -25,10 +25,12 @@ export class ScheduleService implements OnModuleInit, OnModuleDestroy {
     const systemDelay   = parseInt(process.env.JOB_SYSTEM_DELAY   ?? '3000');
     const managerDelay  = parseInt(process.env.JOB_MANAGER_DELAY  ?? '15000');
     const operatorDelay = parseInt(process.env.JOB_OPERATOR_DELAY ?? '20000');
+    const riskyDelay    = parseInt(process.env.JOB_RISKY_DELAY    ?? '60000');
 
     this.register('system-job',   systemDelay,   () => this.doSystemJob());
     this.register('manager-job',  managerDelay,  () => this.doManagerJob());
     this.register('operator-job', operatorDelay, () => this.doOperatorJob());
+    this.register('risky-job',    riskyDelay,    () => this.doRiskyJob());
   }
 
   onModuleDestroy() {
@@ -75,5 +77,26 @@ export class ScheduleService implements OnModuleInit, OnModuleDestroy {
       this.logger.log(msg);
       this.appender.log('INFO', msg, { job: 'operator-job' });
     });
+  }
+
+  private doRiskyJob() {
+    const runId = randomUUID();
+    if (Math.random() < 0.8) {
+      const msg = `OS : Risky job completed normally by node nestjs [${runId}]`;
+      this.logger.log(msg);
+      this.appender.log('INFO', msg, { job: 'risky-job' });
+      return;
+    }
+
+    setTimeout(() => {
+      const level = Math.random() < 0.5 ? 'WARN' : 'ERROR';
+      const msg = `OS : Risky job found unstable condition by node nestjs [${runId}]`;
+      if (level === 'WARN') {
+        this.logger.warn(msg);
+      } else {
+        this.logger.error(msg);
+      }
+      this.appender.log(level, msg, { job: 'risky-job' });
+    }, 3000 + Math.floor(Math.random() * 7001));
   }
 }

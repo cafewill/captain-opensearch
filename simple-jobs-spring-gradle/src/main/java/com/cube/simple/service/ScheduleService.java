@@ -1,6 +1,7 @@
 package com.cube.simple.service;
 
 import java.util.UUID;
+import java.util.concurrent.ThreadLocalRandom;
 
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.retry.annotation.Backoff;
@@ -35,6 +36,24 @@ public class ScheduleService {
 	public void doOperatorJob() {
 		String message = String.format("OS : Just do operator job by spring gradle [%s]", UUID.randomUUID());
 		log.info(message);
+	}
+
+	@Scheduled(fixedRateString = "${job.risky.delay:60000}")
+	public void doRiskyJob() throws InterruptedException {
+		String runId = UUID.randomUUID().toString();
+		int chance = ThreadLocalRandom.current().nextInt(100);
+		if (chance < 80) {
+			log.info("OS : Risky job completed normally by spring gradle [{}]", runId);
+			return;
+		}
+
+		Thread.sleep(ThreadLocalRandom.current().nextLong(3000, 10001));
+		String message = String.format("OS : Risky job found unstable condition by spring gradle [%s]", runId);
+		if (ThreadLocalRandom.current().nextBoolean()) {
+			log.warn(message);
+		} else {
+			log.error(message);
+		}
 	}
 
 	@Recover
