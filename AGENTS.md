@@ -3,7 +3,11 @@
 ## 변수 정의
 ```
 REPO=captain-opensearch
-NS=claude (삼순이 지정: claude, chatgpt, gemini)
+NS=claude (브랜치 생성·커밋·푸시를 직접 실행하는 삼순이 지정: claude, chatgpt, gemini)
+         ⚠️ 코드를 작성한 삼순이가 아니라, git 작업을 실행하는 삼순이 기준
+         예: 클순이(Claude)가 커밋/푸시 → NS=claude
+             지순이(ChatGPT)가 커밋/푸시 → NS=chatgpt
+             제순이(Gemini)가 커밋/푸시 → NS=gemini
 TOOL=opensearch
 LABEL=작업자 또는 목적/용도 구분 정보 (선택, 기본값: .who 파일의 LABEL 사용)
       ⚠️ 영문 소문자 및 숫자만 허용 (특수문자, 한글, 대문자 불가)
