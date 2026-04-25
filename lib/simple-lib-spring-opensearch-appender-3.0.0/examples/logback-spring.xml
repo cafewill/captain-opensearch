@@ -1,0 +1,110 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+
+    <!-- ── 1. 기본 콘솔 출력 ── -->
+    <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder>
+            <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n</pattern>
+        </encoder>
+    </appender>
+
+    <!-- ── 2. 표준 OpenSearch Appender (Job / Web 공용) ── -->
+    <appender name="OPENSEARCH" class="com.cube.opensearch.OpenSearchAppender">
+        <!-- 필수 -->
+        <url>${opensearch.url}</url>
+        <index>${opensearch.index}</index>
+        <username>${opensearch.username}</username>
+        <password>${opensearch.password}</password>
+
+        <!-- SSL: 내부망 자가 서명 인증서 허용 -->
+        <trustAllSsl>${opensearch.trust-all-ssl:-true}</trustAllSsl>
+
+        <!-- 식별 정보 -->
+        <app>${spring.application.name:-app}</app>
+        <env>${spring.profiles.active:-default}</env>
+
+        <!-- 로그 포함 옵션 -->
+        <includeMdc>true</includeMdc>
+        <includeKvp>false</includeKvp>
+        <includeCallerData>false</includeCallerData>
+        <rawJsonMessage>false</rawJsonMessage>
+
+        <!-- 3.0.0: autoStackTraceLevel - ERROR 이상이면 예외 없어도 스택트레이스 자동 첨부 -->
+        <autoStackTraceLevel>ERROR</autoStackTraceLevel>
+
+        <!-- 전송 튜닝 -->
+        <maxBatchBytes>262144</maxBatchBytes>
+        <maxBatchSize>200</maxBatchSize>
+        <maxMessageSize>32768</maxMessageSize>
+        <flushIntervalSeconds>3</flushIntervalSeconds>
+        <queueSize>10000</queueSize>
+        <connectTimeoutMillis>3000</connectTimeoutMillis>
+        <readTimeoutMillis>5000</readTimeoutMillis>
+
+        <!-- 재시도 정책 -->
+        <maxRetries>3</maxRetries>
+        <retryInitialDelayMillis>500</retryInitialDelayMillis>
+        <retryMaxDelayMillis>10000</retryMaxDelayMillis>
+        <retryPartialFailures>true</retryPartialFailures>
+
+        <!-- 벌크 작업 방식 (index 또는 create) -->
+        <operation>index</operation>
+
+        <!-- 타임스탬프 -->
+        <timestampZone>Asia/Seoul</timestampZone>
+
+        <!-- 커스텀 고정 프로퍼티 (PatternLayout 표현식 사용 가능) -->
+        <properties>
+            <property>
+                <name>service_type</name>
+                <value>batch-job</value>
+            </property>
+            <property>
+                <name>log_version</name>
+                <value>3.0.0</value>
+            </property>
+        </properties>
+
+        <!-- 커스텀 헤더 (선택) -->
+        <!--
+        <headers>
+            <header>
+                <name>X-Custom-Header</name>
+                <value>my-value</value>
+            </header>
+        </headers>
+        -->
+    </appender>
+
+    <!-- ── 3. 3.0.0 신규: StructuredArgsOpenSearchAppender ── -->
+    <!--
+        logstash-logback-encoder 의 StructuredArguments.keyValue() 를 OpenSearch 필드로 직렬화.
+        클래스패스에 net.logstash.logback:logstash-logback-encoder 가 있어야 동작하며,
+        없으면 StructuredArgs 필드만 무시되고 나머지 로그는 정상 전송된다.
+
+        사용 예:
+          log.info("order processed", StructuredArguments.keyValue("orderId", 12345));
+          log.info("user action", StructuredArguments.keyValue("userId", "abc"), StructuredArguments.keyValue("action", "login"));
+    -->
+    <!--
+    <appender name="OPENSEARCH_STRUCTURED" class="com.cube.opensearch.StructuredArgsOpenSearchAppender">
+        <url>${opensearch.url}</url>
+        <index>${opensearch.index}</index>
+        <username>${opensearch.username}</username>
+        <password>${opensearch.password}</password>
+        <trustAllSsl>${opensearch.trust-all-ssl:-true}</trustAllSsl>
+        <app>${spring.application.name:-app}</app>
+        <env>${spring.profiles.active:-default}</env>
+        <keyPrefix>arg_</keyPrefix>
+        <objectSerialization>true</objectSerialization>
+        <autoStackTraceLevel>ERROR</autoStackTraceLevel>
+    </appender>
+    -->
+
+    <!-- ── 4. 루트 로거 ── -->
+    <root level="INFO">
+        <appender-ref ref="CONSOLE"/>
+        <appender-ref ref="OPENSEARCH"/>
+    </root>
+
+</configuration>
