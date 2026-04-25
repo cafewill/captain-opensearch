@@ -37,6 +37,7 @@ appender = OpenSearchWebAppender(
     timeout               = int(os.environ.get('OPENSEARCH_TIMEOUT', '10')),
     max_retries           = int(os.environ.get('OPENSEARCH_MAX_RETRIES', '3')),
     headers               = env_headers(),
+    persistent_writer_thread = env_bool('OPENSEARCH_PERSISTENT_WRITER_THREAD', True),
 )
 
 

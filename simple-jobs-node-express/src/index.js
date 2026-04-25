@@ -10,6 +10,18 @@ const MANAGER_DELAY = parseInt(process.env.JOB_MANAGER_DELAY  ?? '15000');
 const OPERATOR_DELAY = parseInt(process.env.JOB_OPERATOR_DELAY ?? '20000');
 const RISKY_DELAY = parseInt(process.env.JOB_RISKY_DELAY ?? '60000');
 
+function envBool(name, defaultValue) {
+  return ['1', 'true', 'yes', 'y'].includes(String(process.env[name] ?? defaultValue).toLowerCase());
+}
+
+function envHeaders() {
+  try {
+    return JSON.parse(process.env.OPENSEARCH_HEADERS ?? '{}');
+  } catch {
+    return {};
+  }
+}
+
 const appender = new OpenSearchJobAppender({
   url:                  process.env.OPENSEARCH_URL                 ?? 'https://localhost:9200',
   username:             process.env.OPENSEARCH_USERNAME            ?? '',
@@ -19,6 +31,12 @@ const appender = new OpenSearchJobAppender({
   maxBatchBytes:        parseInt(process.env.OPENSEARCH_BATCH_MAX_BYTES      ?? '1000000'),
   flushIntervalSeconds: parseInt(process.env.OPENSEARCH_BATCH_FLUSH_INTERVAL ?? '1'),
   queueSize:            parseInt(process.env.OPENSEARCH_BATCH_QUEUE_SIZE     ?? '8192'),
+  operation:            process.env.OPENSEARCH_BULK_OPERATION ?? 'create',
+  trustAllSsl:          envBool('OPENSEARCH_TRUST_ALL_SSL', true),
+  timeout:              parseInt(process.env.OPENSEARCH_TIMEOUT ?? '10'),
+  maxRetries:           parseInt(process.env.OPENSEARCH_MAX_RETRIES ?? '3'),
+  headers:              envHeaders(),
+  persistentWriterThread: envBool('OPENSEARCH_PERSISTENT_WRITER_THREAD', true),
 });
 
 function withRetry(fn, maxAttempts = 3) {

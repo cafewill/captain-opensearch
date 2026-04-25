@@ -463,7 +463,7 @@ dependencies {
 <springProperty scope="context" name="OPENSEARCH_PASS"   source="opensearch.password" defaultValue=""/>
 <springProperty scope="context" name="OPENSEARCH_NAME"   source="spring.application.name" defaultValue="app"/>
 <springProperty scope="context" name="OPENSEARCH_ENV"    source="opensearch.env"    defaultValue="local"/>
-<springProperty scope="context" name="OPENSEARCH_PERSISTENT_WRITER_THREAD" source="opensearch.persistent-writer-thread" defaultValue="false"/>
+<springProperty scope="context" name="OPENSEARCH_PERSISTENT_WRITER_THREAD" source="opensearch.persistent-writer-thread" defaultValue="true"/>
 
 <appender name="OPENSEARCH" class="com.cube.opensearch.OpenSearchAppender">
     <url>${OPENSEARCH_URL}</url>
@@ -511,7 +511,7 @@ opensearch.connect-timeout-millis=5000
 opensearch.read-timeout-millis=30000
 opensearch.max-retries=3
 opensearch.trust-all-ssl=true
-opensearch.persistent-writer-thread=false
+opensearch.persistent-writer-thread=true
 opensearch.include-kvp=true
 opensearch.operation=create
 ```
@@ -588,6 +588,7 @@ OPENSEARCH_TRUST_ALL_SSL=true
 OPENSEARCH_TIMEOUT=10
 OPENSEARCH_MAX_RETRIES=3
 OPENSEARCH_HEADERS={}
+OPENSEARCH_PERSISTENT_WRITER_THREAD=true
 ```
 
 **사용 예시 (Express)**
@@ -596,13 +597,13 @@ OPENSEARCH_HEADERS={}
 const OpenSearchWebAppender = require('./opensearch-web-appender');
 
 const appender = new OpenSearchWebAppender({
-  scheme:   process.env.OPENSEARCH_SCHEME   || 'https',
-  host:     process.env.OPENSEARCH_HOST     || 'localhost',
-  port:     parseInt(process.env.OPENSEARCH_PORT || '9200'),
+  url: process.env.OPENSEARCH_URL || 'https://localhost:9200',
   username: process.env.OPENSEARCH_USERNAME || '',
   password: process.env.OPENSEARCH_PASSWORD || '',
-  app:      'simple-rest-node-express',
-  env:      'local',
+  app: 'simple-rest-node-express',
+  env: 'local',
+  operation: process.env.OPENSEARCH_BULK_OPERATION || 'create',
+  persistentWriterThread: true,
 });
 
 app.use(appender.middleware());  // 모든 요청 trace_id + access log 자동 처리
@@ -611,8 +612,8 @@ app.use(appender.middleware());  // 모든 요청 trace_id + access log 자동 �
 **SSL (내부망 자가 서명 인증서 대응)**
 
 ```js
-// _send() 내부 — rejectUnauthorized: false
-const opts = { ..., rejectUnauthorized: false };
+// trustAllSsl=true 이면 내부망 자가 서명 인증서 허용
+const opts = { rejectUnauthorized: !trustAllSsl };
 ```
 
 **NestJS — no-arg 생성자로 process.env 직접 참조**
