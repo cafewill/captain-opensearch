@@ -19,6 +19,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 public abstract class AbstractOpenSearchAppender extends UnsynchronizedAppenderBase<ILoggingEvent> {
     private final ObjectMapper objectMapper = new ObjectMapper();
     private final AtomicBoolean running = new AtomicBoolean(false);
+    private final AtomicBoolean writerActive = new AtomicBoolean(false);
 
     private String url;
     private String index;
@@ -48,6 +49,7 @@ public abstract class AbstractOpenSearchAppender extends UnsynchronizedAppenderB
     private String timestampFormat;
     private boolean trustAllSsl = true;
     private boolean includeStructuredArgs = false;
+    private boolean persistentWriterThread = false;
 
     private OpenSearchHeaders headers;
     private OpenSearchProperties properties;
@@ -98,9 +100,9 @@ public abstract class AbstractOpenSearchAppender extends UnsynchronizedAppenderB
                 headers
         );
         running.set(true);
-        writerThread = new Thread(this::runLoop, getThreadName());
-        writerThread.setDaemon(true);
-        writerThread.start();
+        if (persistentWriterThread) {
+            startWriterIfNeeded();
+        }
         super.start();
     }
 
@@ -142,6 +144,10 @@ public abstract class AbstractOpenSearchAppender extends UnsynchronizedAppenderB
         }
         if (!queue.offer(eventObject)) {
             addWarn("OpenSearch queue is full. dropping log event.");
+            return;
+        }
+        if (!persistentWriterThread) {
+            startWriterIfNeeded();
         }
     }
 
@@ -168,34 +174,54 @@ public abstract class AbstractOpenSearchAppender extends UnsynchronizedAppenderB
         return valid;
     }
 
+    private void startWriterIfNeeded() {
+        if (!running.get() || !writerActive.compareAndSet(false, true)) {
+            return;
+        }
+        writerThread = new Thread(this::runLoop, getThreadName());
+        writerThread.setDaemon(true);
+        writerThread.start();
+    }
+
     private void runLoop() {
         List<ILoggingEvent> batch = new ArrayList<>();
         long lastFlushAt = System.currentTimeMillis();
 
-        while (running.get() || !queue.isEmpty()) {
-            try {
-                ILoggingEvent event = queue.poll(sleepTime, TimeUnit.MILLISECONDS);
-                if (event != null) {
-                    batch.add(event);
-                }
+        try {
+            while (running.get() || !queue.isEmpty()) {
+                try {
+                    ILoggingEvent event = queue.poll(sleepTime, TimeUnit.MILLISECONDS);
+                    if (event != null) {
+                        batch.add(event);
+                    }
 
-                boolean timeToFlush = (System.currentTimeMillis() - lastFlushAt) >= sleepTime;
-                boolean countToFlush = maxBatchSize > 0 && batch.size() >= maxBatchSize;
-                if (!batch.isEmpty() && (timeToFlush || countToFlush)) {
-                    sendWithRetry(new ArrayList<>(batch));
-                    batch.clear();
-                    lastFlushAt = System.currentTimeMillis();
+                    boolean timeToFlush = (System.currentTimeMillis() - lastFlushAt) >= sleepTime;
+                    boolean countToFlush = maxBatchSize > 0 && batch.size() >= maxBatchSize;
+                    if (!batch.isEmpty() && (timeToFlush || countToFlush)) {
+                        sendWithRetry(new ArrayList<>(batch));
+                        batch.clear();
+                        lastFlushAt = System.currentTimeMillis();
+                    }
+
+                    if (!persistentWriterThread && running.get() && queue.isEmpty() && batch.isEmpty()) {
+                        break;
+                    }
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                    break;
+                } catch (Exception e) {
+                    addError("OpenSearch writer loop error", e);
                 }
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-                break;
-            } catch (Exception e) {
-                addError("OpenSearch writer loop error", e);
             }
-        }
 
-        if (!batch.isEmpty()) {
-            sendWithRetry(batch);
+            if (!batch.isEmpty()) {
+                sendWithRetry(batch);
+            }
+        } finally {
+            writerActive.set(false);
+            if (!persistentWriterThread && running.get() && queue != null && !queue.isEmpty()) {
+                startWriterIfNeeded();
+            }
         }
     }
 
@@ -326,6 +352,7 @@ public abstract class AbstractOpenSearchAppender extends UnsynchronizedAppenderB
     public void setTimestampFormat(String timestampFormat) { this.timestampFormat = timestampFormat; }
     public void setTrustAllSsl(boolean trustAllSsl) { this.trustAllSsl = trustAllSsl; }
     public void setIncludeStructuredArgs(boolean includeStructuredArgs) { this.includeStructuredArgs = includeStructuredArgs; }
+    public void setPersistentWriterThread(boolean persistentWriterThread) { this.persistentWriterThread = persistentWriterThread; }
     public void setHeaders(OpenSearchHeaders headers) { this.headers = headers; }
     public void setProperties(OpenSearchProperties properties) { this.properties = properties; }
 }

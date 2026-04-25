@@ -1,4 +1,4 @@
-# REVIEW3.md — 기능 및 설정 파라미터 비교
+# REVIEW04.md — 기능 및 설정 파라미터 최신 비교
 
 비교 대상:
 
@@ -18,6 +18,7 @@
 | 일반 Logback 이벤트 전송 | 둘 다 지원 |
 | OpenSearch 자가 서명 인증서 대응 | `simple-lib` 우위 (`trustAllSsl`) |
 | Bulk 응답 partial failure 처리 | `simple-lib` 우위 (아이템별 429/5xx 재시도) |
+| Writer thread 생명주기 | 기본값은 logback 방식과 동일. `simple-lib`는 `persistentWriterThread=true`로 고정 daemon writer 방식 선택 가능 |
 | AWS OpenSearch Service 인증 | `logback-elasticsearch` 우위 (`AWSAuthentication`) |
 | Logback Access 지원 | `logback-elasticsearch`만 지원 |
 | 설정 호환성 | 상당히 높음. 단 인증 클래스명, `trustAllSsl`, `persistentWriterThread`, `includeStructuredArgs`는 차이 있음 |
@@ -60,6 +61,7 @@
 |---|---|---|
 | 비동기 처리 | 이벤트 수신 시 writer thread 기동, 큐를 비울 때 종료 | 기본값은 동일. `persistentWriterThread=true`면 appender 시작 시 daemon writer thread 1개 유지 |
 | 이벤트 큐 | `ConcurrentLinkedQueue` | `ArrayBlockingQueue` |
+| writer 중복 방지 | `working.compareAndSet(false, true)` | `writerActive.compareAndSet(false, true)` |
 | 큐 제한 방식 | 전송 문자열 버퍼 길이 기준 `maxQueueSize` 초과 시 추가 write 중단 | `maxQueueSize / 512`로 이벤트 capacity 환산, offer 실패 시 drop |
 | 플러시 기준 | 큐 drain 후 전송, 비어 있으면 `sleepTime` 대기 | `queue.poll(sleepTime)` + 시간/건수 조건 |
 | 배치 건수 제한 | `maxBatchSize`, `-1`이면 무제한 | `maxBatchSize`, `-1`이면 시간 기준 flush |
@@ -152,9 +154,16 @@
 | URL userinfo 인증 | 지원 | 지원 | username/password 미지정 시 fallback |
 | `AWSAuthentication` | 지원 | 미지원 | AWS SDK 필요 |
 | `trustAllSsl` | 미지원 | `true` | simple-lib 전용 |
-| `persistentWriterThread` | 미지원 | `false` | simple-lib 전용. `true`면 writer thread 1개를 계속 유지 |
 
-### 8-3. 큐 / 배치 / 재시도
+### 8-3. Writer thread 생명주기
+
+| 파라미터 | logback 기본값 | simple-lib 기본값 | 비고 |
+|---|---:|---:|---|
+| `persistentWriterThread` | 없음 | `false` | `false`면 logback 방식처럼 이벤트 발생 시 lazy-start 후 idle 상태에서 종료 |
+
+`persistentWriterThread=true`는 simple-lib 전용 개선 옵션이다. 서버 앱처럼 로그가 꾸준히 발생하는 환경에서는 appender 생명주기 동안 daemon writer thread 1개를 유지해 thread 생성/종료 반복을 줄이고 동작을 더 예측 가능하게 만든다.
+
+### 8-4. 큐 / 배치 / 재시도
 
 | 파라미터 | logback 기본값 | simple-lib 기본값 | 비고 |
 |---|---:|---:|---|
@@ -164,7 +173,7 @@
 | `maxBatchSize` | `-1` | `-1` | `-1`은 무제한 의미 |
 | `maxMessageSize` | `-1` | `-1` | 0 이하이면 truncation 없음 |
 
-### 8-4. 로그 내용 옵션
+### 8-5. 로그 내용 옵션
 
 | 파라미터 | logback 기본값 | simple-lib 기본값 | 비고 |
 |---|---:|---:|---|
@@ -175,7 +184,7 @@
 | `timestampFormat` | `null` | `null` | `long`이면 epoch ms |
 | `autoStackTraceLevel` | `OFF` | `OFF` | 이 레벨 이상이면 예외 없이 stack trace 자동 생성 |
 
-### 8-5. Bulk action
+### 8-6. Bulk action
 
 | 파라미터 | logback 기본값 | simple-lib 기본값 | 지원 값 |
 |---|---:|---:|---|
@@ -183,21 +192,13 @@
 
 주의: 두 구현 모두 `update` / `delete` action 이름은 만들 수 있지만, 일반 로그 document를 그대로 두 번째 줄에 쓰는 구조다. Elasticsearch/OpenSearch bulk API의 update/delete 세부 payload 요구사항과 운영 인덱스 정책은 별도 검증이 필요하다.
 
-### 8-6. StructuredArgs / object serialization
+### 8-7. StructuredArgs / object serialization
 
 | 파라미터 | logback 기본값 | simple-lib 기본값 | 비고 |
 |---|---:|---:|---|
 | `keyPrefix` | `null` | `""` | StructuredArgs field prefix |
 | `objectSerialization` | `false` | `false` | true면 Jackson module 등록 |
 | `includeStructuredArgs` | 없음 | `false` | simple-lib 전용. 기본 appender에서도 StructuredArgs 처리 가능 |
-
-### 8-7. Writer thread 생명주기
-
-| 파라미터 | logback 기본값 | simple-lib 기본값 | 비고 |
-|---|---:|---:|---|
-| `persistentWriterThread` | 없음 | `false` | `false`면 logback 방식처럼 이벤트 발생 시 lazy-start 후 idle 상태에서 종료 |
-
-`persistentWriterThread=true`는 simple-lib 전용 개선 옵션이다. 서버 앱처럼 로그가 꾸준히 발생하는 환경에서는 appender 생명주기 동안 daemon writer thread 1개를 유지해 thread 생성/종료 반복을 줄이고 동작을 더 예측 가능하게 만든다.
 
 ### 8-8. 미러링 / 에러 보고
 
@@ -226,11 +227,11 @@
 | 기능 | 설명 |
 |---|---|
 | `trustAllSsl` | 내부망, self-signed OpenSearch 인증서 환경에서 별도 truststore 없이 동작 |
+| `persistentWriterThread` | `true` 설정 시 daemon writer thread 1개를 유지해 thread 생성/종료 반복 감소 |
 | Bulk partial failure 분석 | HTTP 200 응답 안의 item별 `status`를 보고 429/5xx만 재시도 |
 | 기본 문서 필드 풍부 | `level`, `thread`, `logger`, 예외, caller data 등을 기본 구조로 제공 |
 | MDC 타입 보정 | 특정 MDC key를 숫자/불리언으로 저장해 Dashboards 집계 품질 개선 |
 | `includeStructuredArgs` | appender class 교체 없이 StructuredArgs 처리 가능 |
-| `persistentWriterThread` | `true` 설정 시 daemon writer thread 1개를 유지해 thread 생성/종료 반복 감소 |
 | logstash encoder optional | StructuredArgs 미사용 앱에서는 런타임 의존 부담 감소 |
 
 ### 9-2. logback-elasticsearch-appender 3.0.19가 더 넓게 지원하는 지점
@@ -258,6 +259,7 @@
 | AWS auth | 대체 구현 필요. 현재 simple-lib에는 없음 |
 | Logback Access | 대체 구현 필요. 현재 simple-lib에는 없음 |
 | `trustAllSsl` | self-signed OpenSearch면 simple-lib에서 추가 설정 가능 |
+| `persistentWriterThread` | 기본값 `false`는 logback 방식과 동일. 고정 writer thread가 필요할 때만 `true` |
 | `includeMdc` | 기본값이 다르므로 명시 권장 |
 | `properties.property.allowEmpty` | 기본값이 다르므로 명시 권장 |
 | `url` | simple-lib는 `/_bulk` 자동 추가. 기존 URL이 이미 `/_bulk`면 그대로 사용 |
@@ -270,6 +272,8 @@
 | 상황 | 권장 |
 |---|---|
 | 로컬 Docker / 내부망 OpenSearch / self-signed 인증서 | `simple-lib 3.0.0`이 편함 |
+| 로그가 드문 배치/CLI 앱 | `persistentWriterThread=false` 기본값 유지 |
+| 로그가 꾸준한 장기 실행 서버 앱 | `persistentWriterThread=true` 검토 |
 | AWS IAM 서명이 필요한 OpenSearch Service | `logback-elasticsearch-appender` 또는 simple-lib 인증 구현 추가 |
 | HTTP access log를 Logback Access로 직접 수집 | `logback-elasticsearch-appender` |
 | `_bulk` partial failure를 반드시 감지해야 함 | `simple-lib 3.0.0` |
@@ -287,5 +291,6 @@
 3. `ElasticsearchAccessAppender`에 해당하는 Access/Web appender 제공 여부 결정
 4. `properties.property.allowEmpty` 기본값을 logback과 맞출지 검토
 5. `includeMdc` 기본값을 logback과 맞출지, 현재처럼 OpenSearch 운영 편의성을 우선할지 명시
-6. `update` / `delete` operation의 payload 정책 테스트 추가
-7. partial failure, 429, 5xx, 4xx, malformed bulk response에 대한 단위 테스트 추가
+6. `persistentWriterThread` 동작 테스트 추가
+7. `update` / `delete` operation의 payload 정책 테스트 추가
+8. partial failure, 429, 5xx, 4xx, malformed bulk response에 대한 단위 테스트 추가
