@@ -8,20 +8,20 @@
         </encoder>
     </appender>
 
-    <!-- ── 2. 표준 OpenSearch Appender (Job / Web 공용) ── -->
+    <!-- ── 2. 표준 OpenSearch Appender ── -->
     <appender name="OPENSEARCH" class="com.cube.opensearch.OpenSearchAppender">
         <!-- 필수 -->
         <url>${opensearch.url}</url>
         <index>${opensearch.index}</index>
-        <username>${opensearch.username}</username>
-        <password>${opensearch.password}</password>
 
-        <!-- SSL: 내부망 자가 서명 인증서 허용 -->
+        <!-- 인증 (Basic 인증 사용 시) -->
+        <authentication class="com.cube.opensearch.OpenSearchBasicAuthentication">
+            <username>${opensearch.username:-admin}</username>
+            <password>${opensearch.password:-admin}</password>
+        </authentication>
+
+        <!-- SSL: 내부망 자가 서명 인증서 허용 (추가 파라미터) -->
         <trustAllSsl>${opensearch.trust-all-ssl:-true}</trustAllSsl>
-
-        <!-- 식별 정보 -->
-        <app>${spring.application.name:-app}</app>
-        <env>${spring.profiles.active:-default}</env>
 
         <!-- 로그 포함 옵션 -->
         <includeMdc>true</includeMdc>
@@ -33,25 +33,21 @@
         <autoStackTraceLevel>ERROR</autoStackTraceLevel>
 
         <!-- 전송 튜닝 -->
-        <maxBatchBytes>262144</maxBatchBytes>
-        <maxBatchSize>200</maxBatchSize>
-        <maxMessageSize>32768</maxMessageSize>
-        <flushIntervalSeconds>3</flushIntervalSeconds>
-        <queueSize>10000</queueSize>
-        <connectTimeoutMillis>3000</connectTimeoutMillis>
-        <readTimeoutMillis>5000</readTimeoutMillis>
+        <sleepTime>250</sleepTime>
+        <maxBatchSize>-1</maxBatchSize>
+        <maxMessageSize>-1</maxMessageSize>
+        <maxQueueSize>104857600</maxQueueSize>
+        <connectTimeout>30000</connectTimeout>
+        <readTimeout>30000</readTimeout>
 
-        <!-- 재시도 정책 -->
+        <!-- 재시도 -->
         <maxRetries>3</maxRetries>
-        <retryInitialDelayMillis>500</retryInitialDelayMillis>
-        <retryMaxDelayMillis>10000</retryMaxDelayMillis>
-        <retryPartialFailures>true</retryPartialFailures>
 
-        <!-- 벌크 작업 방식 (index 또는 create) -->
-        <operation>index</operation>
+        <!-- 벌크 작업 방식 (index / create / update / delete) -->
+        <operation>create</operation>
 
-        <!-- 타임스탬프 -->
-        <timestampZone>Asia/Seoul</timestampZone>
+        <!-- 타임스탬프 포맷 (JVM 기본 타임존 사용, Asia/Seoul 예: yyyy-MM-dd'T'HH:mm:ss.SSSXXX) -->
+        <!-- <timestampFormat>yyyy-MM-dd'T'HH:mm:ss.SSSXXX</timestampFormat> -->
 
         <!-- 커스텀 고정 프로퍼티 (PatternLayout 표현식 사용 가능) -->
         <properties>
@@ -90,11 +86,11 @@
     <appender name="OPENSEARCH_STRUCTURED" class="com.cube.opensearch.StructuredArgsOpenSearchAppender">
         <url>${opensearch.url}</url>
         <index>${opensearch.index}</index>
-        <username>${opensearch.username}</username>
-        <password>${opensearch.password}</password>
+        <authentication class="com.cube.opensearch.OpenSearchBasicAuthentication">
+            <username>${opensearch.username:-admin}</username>
+            <password>${opensearch.password:-admin}</password>
+        </authentication>
         <trustAllSsl>${opensearch.trust-all-ssl:-true}</trustAllSsl>
-        <app>${spring.application.name:-app}</app>
-        <env>${spring.profiles.active:-default}</env>
         <keyPrefix>arg_</keyPrefix>
         <objectSerialization>true</objectSerialization>
         <autoStackTraceLevel>ERROR</autoStackTraceLevel>

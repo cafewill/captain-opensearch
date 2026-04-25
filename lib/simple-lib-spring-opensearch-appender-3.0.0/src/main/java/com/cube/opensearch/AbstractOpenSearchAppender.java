@@ -18,55 +18,44 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 public abstract class AbstractOpenSearchAppender extends UnsynchronizedAppenderBase<ILoggingEvent> {
     private final ObjectMapper objectMapper = new ObjectMapper();
-    private final RetryPolicy retryPolicy = new RetryPolicy();
     private final AtomicBoolean running = new AtomicBoolean(false);
 
     private String url;
     private String index;
-    private String username;
-    private String password;
-    private String app;
-    private String env;
-    private int maxBatchBytes = 256 * 1024;
-    private int maxBatchSize = 200;
-    private int maxMessageSize = 32 * 1024;
-    private int flushIntervalSeconds = 3;
-    private int queueSize = 10_000;
-    private int connectTimeoutMillis = 3_000;
-    private int readTimeoutMillis = 5_000;
-    private long retryInitialDelayMillis = 500L;
-    private long retryMaxDelayMillis = 10_000L;
-    private int maxRetries = 3;
-    private boolean retryPartialFailures = true;
-    private boolean trustAllSsl = true;
-    private String deadLetterLoggerName = "com.cube.opensearch.deadletter";
-    private String instanceId;
-    private String timestampZone = "UTC";
-    private String timestampFormat;
-    private String operation = "index";
-    private boolean includeMdc = true;
-    private boolean includeKvp = false;
-    private boolean includeCallerData = false;
-    private boolean rawJsonMessage = false;
-    private boolean logsToStderr = false;
-    private boolean errorsToStderr = false;
+    private String type;
     private String loggerName;
     private String errorLoggerName;
-    private OpenSearchHeaders headers;
-    private OpenSearchProperties properties;
 
-    // 3.0.0: logback-elasticsearch-appender 기능 통합
-    private String autoStackTraceLevel = "OFF";
-    private int resolvedAutoStackTraceLevelInt = Level.OFF.levelInt;
+    private int sleepTime = 250;
+    private int maxRetries = 3;
+    private int connectTimeout = 30_000;
+    private int readTimeout = 30_000;
+    private boolean logsToStderr = false;
+    private boolean errorsToStderr = false;
+    private boolean includeCallerData = false;
+    private boolean includeMdc = true;
+    private boolean rawJsonMessage = false;
+    private int maxQueueSize = 100 * 1024 * 1024;
+    private OpenSearchAuthentication authentication;
+    private int maxMessageSize = -1;
     private String keyPrefix = "";
     private boolean objectSerialization = false;
+    private String autoStackTraceLevel = "OFF";
+    private int resolvedAutoStackTraceLevelInt = Level.OFF.levelInt;
+    private String operation = "create";
+    private boolean includeKvp = false;
+    private int maxBatchSize = -1;
+    private String timestampFormat;
+    private boolean trustAllSsl = true;
     private boolean includeStructuredArgs = false;
+
+    private OpenSearchHeaders headers;
+    private OpenSearchProperties properties;
 
     private BlockingQueue<ILoggingEvent> queue;
     private Thread writerThread;
     private BulkPayloadBuilder payloadBuilder;
     private OpenSearchSender sender;
-    private DeadLetterHandler deadLetterHandler;
 
     public AbstractOpenSearchAppender() {
     }
@@ -80,21 +69,13 @@ public abstract class AbstractOpenSearchAppender extends UnsynchronizedAppenderB
             objectMapper.findAndRegisterModules();
         }
 
-        retryPolicy.setMaxRetries(maxRetries);
-        retryPolicy.setInitialDelayMillis(retryInitialDelayMillis);
-        retryPolicy.setMaxDelayMillis(retryMaxDelayMillis);
-        retryPolicy.setRetryPartialFailures(retryPartialFailures);
-
-        String resolvedInstanceId = firstNonBlank(instanceId, OpenSearchSender.resolveInstanceId());
-        this.queue = new ArrayBlockingQueue<>(Math.max(100, queueSize));
+        int queueCapacity = Math.max(100, maxQueueSize / 512);
+        this.queue = new ArrayBlockingQueue<>(queueCapacity);
         this.payloadBuilder = new BulkPayloadBuilder(
                 getContext(),
                 objectMapper,
                 index,
-                firstNonBlank(app, "unknown-app"),
-                firstNonBlank(env, "default"),
-                resolvedInstanceId,
-                timestampZone,
+                type,
                 timestampFormat,
                 operation,
                 includeMdc,
@@ -110,14 +91,12 @@ public abstract class AbstractOpenSearchAppender extends UnsynchronizedAppenderB
         this.sender = new OpenSearchSender(
                 objectMapper,
                 url,
-                username,
-                password,
-                connectTimeoutMillis,
-                readTimeoutMillis,
+                authentication,
+                connectTimeout,
+                readTimeout,
                 trustAllSsl,
                 headers
         );
-        this.deadLetterHandler = new Slf4jDeadLetterHandler(deadLetterLoggerName);
         running.set(true);
         writerThread = new Thread(this::runLoop, getThreadName());
         writerThread.setDaemon(true);
@@ -152,7 +131,6 @@ public abstract class AbstractOpenSearchAppender extends UnsynchronizedAppenderB
         if (includeCallerData) {
             eventObject.getCallerData();
         }
-        // autoStackTraceLevel: 예외 없는 고레벨 로그에 스택트레이스 자동 첨부
         if (resolvedAutoStackTraceLevelInt < Level.OFF.levelInt
                 && eventObject instanceof LoggingEvent le
                 && le.getThrowableProxy() == null
@@ -179,25 +157,13 @@ public abstract class AbstractOpenSearchAppender extends UnsynchronizedAppenderB
             addError("index must not be blank");
             valid = false;
         }
-        if (flushIntervalSeconds <= 0) {
-            addWarn("flushIntervalSeconds <= 0. using default 3");
-            flushIntervalSeconds = 3;
+        if (sleepTime < 100) {
+            addWarn("sleepTime < 100. using minimum 100");
+            sleepTime = 100;
         }
-        if (maxBatchBytes <= 0) {
-            addWarn("maxBatchBytes <= 0. using default 262144");
-            maxBatchBytes = 256 * 1024;
-        }
-        if (maxBatchSize < 0) {
-            addWarn("maxBatchSize < 0. using default 200");
-            maxBatchSize = 200;
-        }
-        if (maxMessageSize < 0) {
-            addWarn("maxMessageSize < 0. using default 32768");
-            maxMessageSize = 32 * 1024;
-        }
-        if (!"index".equalsIgnoreCase(operation) && !"create".equalsIgnoreCase(operation)) {
-            addWarn("operation must be index or create. using default index");
-            operation = "index";
+        if (maxQueueSize <= 0) {
+            addWarn("maxQueueSize <= 0. using default 104857600");
+            maxQueueSize = 100 * 1024 * 1024;
         }
         return valid;
     }
@@ -208,15 +174,14 @@ public abstract class AbstractOpenSearchAppender extends UnsynchronizedAppenderB
 
         while (running.get() || !queue.isEmpty()) {
             try {
-                ILoggingEvent event = queue.poll(500, TimeUnit.MILLISECONDS);
+                ILoggingEvent event = queue.poll(sleepTime, TimeUnit.MILLISECONDS);
                 if (event != null) {
                     batch.add(event);
                 }
 
-                boolean timeToFlush = (System.currentTimeMillis() - lastFlushAt) >= (flushIntervalSeconds * 1000L);
-                boolean sizeToFlush = estimateBytes(batch) >= maxBatchBytes;
+                boolean timeToFlush = (System.currentTimeMillis() - lastFlushAt) >= sleepTime;
                 boolean countToFlush = maxBatchSize > 0 && batch.size() >= maxBatchSize;
-                if (!batch.isEmpty() && (timeToFlush || sizeToFlush || countToFlush)) {
+                if (!batch.isEmpty() && (timeToFlush || countToFlush)) {
                     sendWithRetry(new ArrayList<>(batch));
                     batch.clear();
                     lastFlushAt = System.currentTimeMillis();
@@ -246,37 +211,32 @@ public abstract class AbstractOpenSearchAppender extends UnsynchronizedAppenderB
 
     private void attemptSend(List<BulkPayloadBuilder.BulkItem> items) {
         List<BulkPayloadBuilder.BulkItem> current = items;
-        for (int attempt = 0; attempt <= retryPolicy.maxRetries(); attempt++) {
+        for (int attempt = 0; attempt <= maxRetries; attempt++) {
             try {
                 String payload = payloadBuilder.buildPayload(current);
                 mirrorPayload(payload);
-                SendResult result = sender.send(current, payload, retryPolicy.retryPartialFailures());
+                SendResult result = sender.send(current, payload);
                 if (result.isSuccess()) {
                     return;
                 }
                 if (result.retryableItems().isEmpty()) {
                     reportFailure("OpenSearch fatal failure: " + result.message(), result.cause());
-                    deadLetterHandler.store(current, result.message(), result.cause());
                     addWarn("OpenSearch fatal failure: " + result.message());
                     return;
                 }
                 current = result.retryableItems();
-                if (attempt >= retryPolicy.maxRetries()) {
+                if (attempt >= maxRetries) {
                     reportFailure("OpenSearch retry exhausted: " + result.message(), result.cause());
-                    deadLetterHandler.store(current, result.message(), result.cause());
                     addWarn("OpenSearch retry exhausted: " + result.message());
                     return;
                 }
-                long delay = retryPolicy.backoffMillis(attempt + 1);
-                Thread.sleep(delay);
+                Thread.sleep(sleepTime);
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
                 reportFailure("Interrupted during retry", e);
-                deadLetterHandler.store(current, "Interrupted during retry", e);
                 return;
             } catch (Exception e) {
                 reportFailure("Unexpected send failure", e);
-                deadLetterHandler.store(current, "Unexpected send failure", e);
                 return;
             }
         }
@@ -291,26 +251,6 @@ public abstract class AbstractOpenSearchAppender extends UnsynchronizedAppenderB
         if (!remaining.isEmpty()) {
             sendWithRetry(remaining);
         }
-    }
-
-    private int estimateBytes(List<ILoggingEvent> events) {
-        int size = 0;
-        for (ILoggingEvent event : events) {
-            size += event.getFormattedMessage() == null ? 128 : event.getFormattedMessage().length() + 256;
-        }
-        return size;
-    }
-
-    private String firstNonBlank(String... values) {
-        if (values == null) {
-            return null;
-        }
-        for (String value : values) {
-            if (value != null && !value.isBlank()) {
-                return value.trim();
-            }
-        }
-        return null;
     }
 
     private void mirrorPayload(String payload) {
@@ -346,44 +286,46 @@ public abstract class AbstractOpenSearchAppender extends UnsynchronizedAppenderB
 
     public void setUrl(String url) { this.url = url; }
     public void setIndex(String index) { this.index = index; }
-    public void setUsername(String username) { this.username = username; }
-    public void setPassword(String password) { this.password = password; }
-    public void setApp(String app) { this.app = app; }
-    public void setEnv(String env) { this.env = env; }
-    public void setMaxBatchBytes(int maxBatchBytes) { this.maxBatchBytes = maxBatchBytes; }
-    public void setMaxBatchSize(int maxBatchSize) { this.maxBatchSize = maxBatchSize; }
-    public void setMaxMessageSize(int maxMessageSize) { this.maxMessageSize = maxMessageSize; }
-    public void setFlushIntervalSeconds(int flushIntervalSeconds) { this.flushIntervalSeconds = flushIntervalSeconds; }
-    public void setQueueSize(int queueSize) { this.queueSize = queueSize; }
-    public void setConnectTimeoutMillis(int connectTimeoutMillis) { this.connectTimeoutMillis = connectTimeoutMillis; }
-    public void setReadTimeoutMillis(int readTimeoutMillis) { this.readTimeoutMillis = readTimeoutMillis; }
-    public void setRetryInitialDelayMillis(long retryInitialDelayMillis) { this.retryInitialDelayMillis = retryInitialDelayMillis; }
-    public void setRetryMaxDelayMillis(long retryMaxDelayMillis) { this.retryMaxDelayMillis = retryMaxDelayMillis; }
-    public void setMaxRetries(int maxRetries) { this.maxRetries = maxRetries; }
-    public void setRetryPartialFailures(boolean retryPartialFailures) { this.retryPartialFailures = retryPartialFailures; }
-    public void setTrustAllSsl(boolean trustAllSsl) { this.trustAllSsl = trustAllSsl; }
-    public void setDeadLetterLoggerName(String deadLetterLoggerName) { this.deadLetterLoggerName = deadLetterLoggerName; }
-    public void setInstanceId(String instanceId) { this.instanceId = instanceId; }
-    public void setTimestampZone(String timestampZone) { this.timestampZone = timestampZone; }
-    public void setTimestampFormat(String timestampFormat) { this.timestampFormat = timestampFormat; }
-    public void setOperation(String operation) { this.operation = operation; }
-    public void setIncludeMdc(boolean includeMdc) { this.includeMdc = includeMdc; }
-    public void setIncludeKvp(boolean includeKvp) { this.includeKvp = includeKvp; }
-    public void setIncludeCallerData(boolean includeCallerData) { this.includeCallerData = includeCallerData; }
-    public void setRawJsonMessage(boolean rawJsonMessage) { this.rawJsonMessage = rawJsonMessage; }
-    public void setLogsToStderr(boolean logsToStderr) { this.logsToStderr = logsToStderr; }
-    public void setErrorsToStderr(boolean errorsToStderr) { this.errorsToStderr = errorsToStderr; }
+    public void setType(String type) { this.type = type; }
     public void setLoggerName(String loggerName) { this.loggerName = loggerName; }
     public void setErrorLoggerName(String errorLoggerName) { this.errorLoggerName = errorLoggerName; }
-    public void setHeaders(OpenSearchHeaders headers) { this.headers = headers; }
-    public void setProperties(OpenSearchProperties properties) { this.properties = properties; }
-
-    // 3.0.0 setters
+    public void setSleepTime(int sleepTime) { this.sleepTime = sleepTime; }
+    public void setMaxRetries(int maxRetries) { this.maxRetries = Math.max(0, maxRetries); }
+    public void setConnectTimeout(int connectTimeout) { this.connectTimeout = connectTimeout; }
+    public void setReadTimeout(int readTimeout) { this.readTimeout = readTimeout; }
+    public void setLogsToStderr(boolean logsToStderr) { this.logsToStderr = logsToStderr; }
+    public void setErrorsToStderr(boolean errorsToStderr) { this.errorsToStderr = errorsToStderr; }
+    public void setIncludeCallerData(boolean includeCallerData) { this.includeCallerData = includeCallerData; }
+    public void setIncludeMdc(boolean includeMdc) { this.includeMdc = includeMdc; }
+    public void setRawJsonMessage(boolean rawJsonMessage) { this.rawJsonMessage = rawJsonMessage; }
+    public void setMaxQueueSize(int maxQueueSize) { this.maxQueueSize = maxQueueSize; }
+    public void setAuthentication(OpenSearchAuthentication authentication) { this.authentication = authentication; }
+    public void setMaxMessageSize(int maxMessageSize) { this.maxMessageSize = maxMessageSize; }
+    public void setKeyPrefix(String keyPrefix) { this.keyPrefix = keyPrefix == null ? "" : keyPrefix; }
+    public void setObjectSerialization(boolean objectSerialization) { this.objectSerialization = objectSerialization; }
     public void setAutoStackTraceLevel(String level) {
         this.autoStackTraceLevel = level;
         this.resolvedAutoStackTraceLevelInt = Level.toLevel(level, Level.OFF).levelInt;
     }
-    public void setKeyPrefix(String keyPrefix) { this.keyPrefix = keyPrefix == null ? "" : keyPrefix; }
-    public void setObjectSerialization(boolean objectSerialization) { this.objectSerialization = objectSerialization; }
+    public void setOperation(String operation) {
+        if (operation == null || operation.isBlank()) {
+            addWarn("Invalid value for [operation], using create");
+            this.operation = "create";
+            return;
+        }
+        String lower = operation.trim().toLowerCase();
+        if (!lower.equals("index") && !lower.equals("create") && !lower.equals("update") && !lower.equals("delete")) {
+            addWarn("Invalid value for [operation]: " + operation + ", using create");
+            this.operation = "create";
+            return;
+        }
+        this.operation = lower;
+    }
+    public void setIncludeKvp(boolean includeKvp) { this.includeKvp = includeKvp; }
+    public void setMaxBatchSize(int maxBatchSize) { this.maxBatchSize = maxBatchSize; }
+    public void setTimestampFormat(String timestampFormat) { this.timestampFormat = timestampFormat; }
+    public void setTrustAllSsl(boolean trustAllSsl) { this.trustAllSsl = trustAllSsl; }
     public void setIncludeStructuredArgs(boolean includeStructuredArgs) { this.includeStructuredArgs = includeStructuredArgs; }
+    public void setHeaders(OpenSearchHeaders headers) { this.headers = headers; }
+    public void setProperties(OpenSearchProperties properties) { this.properties = properties; }
 }

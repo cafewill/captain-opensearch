@@ -13,13 +13,10 @@ import javax.net.ssl.X509TrustManager;
 import java.io.ByteArrayOutputStream;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.lang.management.ManagementFactory;
 import java.net.HttpURLConnection;
-import java.net.InetAddress;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
-import java.util.Base64;
 import java.util.List;
 
 final class OpenSearchSender {
@@ -27,30 +24,29 @@ final class OpenSearchSender {
 
     private final ObjectMapper objectMapper;
     private final String url;
-    private final String basicAuth;
-    private final int connectTimeoutMillis;
-    private final int readTimeoutMillis;
+    private final OpenSearchAuthentication authentication;
+    private final int connectTimeout;
+    private final int readTimeout;
     private final SSLSocketFactory sslSocketFactory;
     private final OpenSearchHeaders headers;
 
     OpenSearchSender(ObjectMapper objectMapper,
                      String url,
-                     String username,
-                     String password,
-                     int connectTimeoutMillis,
-                     int readTimeoutMillis,
+                     OpenSearchAuthentication authentication,
+                     int connectTimeout,
+                     int readTimeout,
                      boolean trustAllSsl,
                      OpenSearchHeaders headers) {
         this.objectMapper = objectMapper;
         this.url = trimTrailingSlash(url);
-        this.connectTimeoutMillis = connectTimeoutMillis;
-        this.readTimeoutMillis = readTimeoutMillis;
-        this.basicAuth = buildBasicAuth(username, password);
+        this.authentication = authentication;
+        this.connectTimeout = connectTimeout;
+        this.readTimeout = readTimeout;
         this.sslSocketFactory = trustAllSsl ? buildTrustAllFactory() : null;
         this.headers = headers;
     }
 
-    SendResult send(List<BulkPayloadBuilder.BulkItem> items, String payload, boolean retryPartialFailures) {
+    SendResult send(List<BulkPayloadBuilder.BulkItem> items, String payload) {
         HttpURLConnection connection = null;
         try {
             URL endpoint = new URL(resolveBulkUrl());
@@ -58,8 +54,8 @@ final class OpenSearchSender {
             connection.setRequestMethod("POST");
             connection.setRequestProperty("Content-Type", "application/x-ndjson");
             connection.setRequestProperty("Accept", "application/json");
-            if (basicAuth != null) {
-                connection.setRequestProperty("Authorization", basicAuth);
+            if (authentication != null) {
+                authentication.addAuth(connection, payload);
             }
             applyHeaders(connection);
             connection.setDoOutput(true);
@@ -76,7 +72,7 @@ final class OpenSearchSender {
             if (code >= 400) {
                 return SendResult.fatal("HTTP " + code + ": " + abbreviate(body), null);
             }
-            return analyzeBulkResponse(items, body, retryPartialFailures);
+            return analyzeBulkResponse(items, body);
         } catch (Exception e) {
             return SendResult.retryable(items, "send exception", e);
         } finally {
@@ -86,32 +82,10 @@ final class OpenSearchSender {
         }
     }
 
-    static String resolveInstanceId() {
-        String fromEnv = firstNonBlank(System.getenv("INSTANCE_ID"), System.getenv("HOSTNAME"));
-        if (fromEnv != null) {
-            return fromEnv;
-        }
-        try {
-            String host = InetAddress.getLocalHost().getHostName();
-            if (host != null && !host.isBlank()) {
-                return host;
-            }
-        } catch (Exception ignored) {
-        }
-        try {
-            String pidName = ManagementFactory.getRuntimeMXBean().getName();
-            if (pidName != null && !pidName.isBlank()) {
-                return "pid-" + pidName.split("@")[0];
-            }
-        } catch (Exception ignored) {
-        }
-        return "unknown-instance";
-    }
-
     private HttpURLConnection openConnection(URL endpoint) throws Exception {
         HttpURLConnection connection = (HttpURLConnection) endpoint.openConnection();
-        connection.setConnectTimeout(connectTimeoutMillis);
-        connection.setReadTimeout(readTimeoutMillis);
+        connection.setConnectTimeout(connectTimeout);
+        connection.setReadTimeout(readTimeout);
 
         if (connection instanceof HttpsURLConnection httpsURLConnection && sslSocketFactory != null) {
             httpsURLConnection.setSSLSocketFactory(sslSocketFactory);
@@ -120,9 +94,7 @@ final class OpenSearchSender {
         return connection;
     }
 
-    private SendResult analyzeBulkResponse(List<BulkPayloadBuilder.BulkItem> items,
-                                           String body,
-                                           boolean retryPartialFailures) throws Exception {
+    private SendResult analyzeBulkResponse(List<BulkPayloadBuilder.BulkItem> items, String body) throws Exception {
         if (body == null || body.isBlank()) {
             return SendResult.success();
         }
@@ -140,9 +112,9 @@ final class OpenSearchSender {
         for (int i = 0; i < responseItems.size() && i < items.size(); i++) {
             JsonNode itemNode = responseItems.get(i);
             JsonNode node = itemNode.path("index");
-            if (node.isMissingNode()) {
-                node = itemNode.path("create");
-            }
+            if (node.isMissingNode()) node = itemNode.path("create");
+            if (node.isMissingNode()) node = itemNode.path("update");
+            if (node.isMissingNode()) node = itemNode.path("delete");
             int status = node.path("status").asInt(200);
             if (status == 429 || status >= 500) {
                 retryable.add(items.get(i));
@@ -158,11 +130,8 @@ final class OpenSearchSender {
             }
         }
 
-        if (!retryable.isEmpty() && retryPartialFailures) {
-            return SendResult.retryable(retryable, "partial retryable: " + fatalMessages, null);
-        }
         if (!retryable.isEmpty()) {
-            return SendResult.fatal("partial retryable but retry disabled", null);
+            return SendResult.retryable(retryable, "partial retryable: " + fatalMessages, null);
         }
         if (!fatalMessages.isEmpty()) {
             return SendResult.fatal(fatalMessages.toString().trim(), null);
@@ -218,14 +187,6 @@ final class OpenSearchSender {
         }
     }
 
-    private String buildBasicAuth(String username, String password) {
-        if (username == null || username.isBlank()) {
-            return null;
-        }
-        String raw = username + ":" + (password == null ? "" : password);
-        return "Basic " + Base64.getEncoder().encodeToString(raw.getBytes(StandardCharsets.UTF_8));
-    }
-
     private String abbreviate(String value) {
         if (value == null) {
             return "";
@@ -245,17 +206,5 @@ final class OpenSearchSender {
             return null;
         }
         return source.endsWith("/") ? source.substring(0, source.length() - 1) : source;
-    }
-
-    private static String firstNonBlank(String... values) {
-        if (values == null) {
-            return null;
-        }
-        for (String value : values) {
-            if (value != null && !value.isBlank()) {
-                return value.trim();
-            }
-        }
-        return null;
     }
 }
