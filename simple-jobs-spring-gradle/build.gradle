@@ -20,7 +20,7 @@ repositories {
 
 dependencies {
 	implementation 'org.springframework.boot:spring-boot-starter'
-	implementation 'com.cube:simple-lib-spring-opensearch-appender:2.0.0'
+	implementation 'com.cube:simple-lib-spring-opensearch-appender:3.0.0'
 	implementation 'org.springframework.retry:spring-retry'
 	implementation 'org.springframework:spring-aspects'
 	compileOnly 'org.projectlombok:lombok'
