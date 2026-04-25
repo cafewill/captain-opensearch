@@ -24,7 +24,7 @@
         <trustAllSsl>${opensearch.trust-all-ssl:-true}</trustAllSsl>
 
         <!-- Writer thread: false면 logback-elasticsearch처럼 이벤트 발생 시 기동 후 idle 시 종료, true면 daemon thread 1개 유지 -->
-        <persistentWriterThread>${opensearch.persistent-writer-thread:-false}</persistentWriterThread>
+        <persistentWriterThread>${opensearch.persistent-writer-thread:-true}</persistentWriterThread>
 
         <!-- 로그 포함 옵션 -->
         <includeMdc>true</includeMdc>
@@ -94,7 +94,7 @@
             <password>${opensearch.password:-admin}</password>
         </authentication>
         <trustAllSsl>${opensearch.trust-all-ssl:-true}</trustAllSsl>
-        <persistentWriterThread>${opensearch.persistent-writer-thread:-false}</persistentWriterThread>
+        <persistentWriterThread>${opensearch.persistent-writer-thread:-true}</persistentWriterThread>
         <keyPrefix>arg_</keyPrefix>
         <objectSerialization>true</objectSerialization>
         <autoStackTraceLevel>ERROR</autoStackTraceLevel>

@@ -29,6 +29,7 @@ class OpenSearchWebAppender:
         timeout=10,
         max_retries=3,
         headers=None,
+        persistent_writer_thread=True,
     ):
         self._index       = f'logs-{app}'
         self._app         = app
@@ -36,6 +37,8 @@ class OpenSearchWebAppender:
         self._instance_id = os.environ.get('HOSTNAME') or socket.gethostname()
         self._max_bytes   = max_batch_bytes
         self._max_retries = max(0, int(max_retries))
+        self._interval    = flush_interval_seconds
+        self._persistent_writer_thread = persistent_writer_thread
         self._queue       = queue.Queue(maxsize=queue_size)
         self._retry       = []  # 전송 실패 항목 — 다음 _flush() 에서 우선 처리
         self._sender      = BulkOnlySender(
@@ -48,8 +51,9 @@ class OpenSearchWebAppender:
             headers=headers,
         )
         self._running = True
-        self._thread  = threading.Thread(target=self._run, args=(flush_interval_seconds,), daemon=True)
-        self._thread.start()
+        self._thread  = None
+        if self._persistent_writer_thread:
+            self._start_writer()
         atexit.register(self.stop)  # 프로세스 종료 시 미전송 로그 플러시
 
     def log(self, level: str, message: str, **extra):
@@ -68,6 +72,8 @@ class OpenSearchWebAppender:
         }
         try:
             self._queue.put_nowait((f'{self._index}-{today}', doc))
+            if not self._persistent_writer_thread:
+                self._start_writer()
         except queue.Full:
             pass
 
@@ -98,10 +104,18 @@ class OpenSearchWebAppender:
         self._running = False
         self._flush()
 
-    def _run(self, interval: int):
+    def _start_writer(self):
+        if self._thread and self._thread.is_alive():
+            return
+        self._thread = threading.Thread(target=self._run, daemon=True)
+        self._thread.start()
+
+    def _run(self):
         while self._running:
-            time.sleep(interval)
+            time.sleep(self._interval)
             self._flush()
+            if not self._persistent_writer_thread and self._queue.empty() and not self._retry:
+                break
 
     def _flush(self):
         # 이전 전송 실패 항목을 우선 처리 후 새 항목 추가

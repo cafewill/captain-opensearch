@@ -5,6 +5,18 @@ import { OpenSearchJobAppender } from './opensearch.job-appender';
 
 type ExtraFields = Record<string, string>;
 
+function envBool(name: string, defaultValue: boolean): boolean {
+  return ['1', 'true', 'yes', 'y'].includes(String(process.env[name] ?? defaultValue).toLowerCase());
+}
+
+function envHeaders(): Record<string, string> {
+  try {
+    return JSON.parse(process.env.OPENSEARCH_HEADERS ?? '{}');
+  } catch {
+    return {};
+  }
+}
+
 @Injectable()
 export class ScheduleService implements OnModuleInit, OnModuleDestroy {
   private readonly logger = new Logger(ScheduleService.name);
@@ -24,6 +36,12 @@ export class ScheduleService implements OnModuleInit, OnModuleDestroy {
       maxBatchBytes: parseInt(process.env.OPENSEARCH_BATCH_MAX_BYTES ?? '1000000'),
       flushIntervalSeconds: parseInt(process.env.OPENSEARCH_BATCH_FLUSH_INTERVAL ?? '1'),
       queueSize: parseInt(process.env.OPENSEARCH_BATCH_QUEUE_SIZE ?? '8192'),
+      operation: process.env.OPENSEARCH_BULK_OPERATION ?? 'create',
+      trustAllSsl: envBool('OPENSEARCH_TRUST_ALL_SSL', true),
+      timeout: parseInt(process.env.OPENSEARCH_TIMEOUT ?? '10'),
+      maxRetries: parseInt(process.env.OPENSEARCH_MAX_RETRIES ?? '3'),
+      headers: envHeaders(),
+      persistentWriterThread: envBool('OPENSEARCH_PERSISTENT_WRITER_THREAD', true),
     });
   }
 

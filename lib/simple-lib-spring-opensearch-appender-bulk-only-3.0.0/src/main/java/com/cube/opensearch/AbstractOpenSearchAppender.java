@@ -49,7 +49,7 @@ public abstract class AbstractOpenSearchAppender extends UnsynchronizedAppenderB
     private String timestampFormat;
     private boolean trustAllSsl = true;
     private boolean includeStructuredArgs = false;
-    private boolean persistentWriterThread = false;
+    private boolean persistentWriterThread = true;
 
     private OpenSearchHeaders headers;
     private OpenSearchProperties properties;
