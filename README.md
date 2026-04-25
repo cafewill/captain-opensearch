@@ -53,7 +53,7 @@ cp .env-example .env
 
 - Spring 공용 라이브러리 `simple-lib-spring-opensearch-appender-3.0.0` 를 기준으로 `_bulk` 응답 분석, partial failure 처리, `trustAllSsl`, `persistentWriterThread`, `maxBatchSize`, `maxMessageSize`, `operation`, `includeKvp`, custom `headers` / `properties` 지원을 보강했습니다.
 - Spring 배치 샘플 `simple-jobs-spring-maven`, `simple-jobs-spring-gradle` 에 테스트 격리용 `logback-test.xml`, `job.scheduling.enabled=false` 대응을 추가했습니다.
-- MDC 예제 앱 `simple-jobs-spring-maven-with-mdc`, `simple-jobs-spring-gradle-with-mdc` 를 추가했습니다.
+- MDC 예제 앱 `simple-jobs-spring-*with-mdc`, `simple-jobs-node-*with-mdc`, `simple-jobs-python-*with-mdc` 를 추가했습니다.
 - Spring 배치 4개 앱의 OpenSearch 계정 정보는 모두 `https://localhost:9200`, `admin`, `Demo3543##` 기준으로 맞췄습니다.
 - `docker-compose-3.6.0.yml` 기준 OpenSearch 3.6.0 과 Dashboards 3.6.0 환경에서 Spring MDC 로그 적재가 가능하도록 문서와 예시 설정을 함께 갱신했습니다.
 
@@ -227,8 +227,13 @@ npm run dev          # 개발 서버
 | `simple-jobs-node-express`  | Node.js / Express | - | npm |
 | `simple-jobs-node-fastify`  | Node.js / Fastify | - | npm |
 | `simple-jobs-node-nestjs`   | Node.js / NestJS  | - | npm |
+| `simple-jobs-node-express-with-mdc`  | Node.js / Express + MDC 예제 | - | npm |
+| `simple-jobs-node-fastify-with-mdc`  | Node.js / Fastify + MDC 예제 | - | npm |
+| `simple-jobs-node-nestjs-with-mdc`   | Node.js / NestJS + MDC 예제  | - | npm |
 | `simple-jobs-python-flask`  | Python / Flask + APScheduler | - | pip |
 | `simple-jobs-python-fastapi`| Python / FastAPI + APScheduler | - | pip |
+| `simple-jobs-python-flask-with-mdc`  | Python / Flask + APScheduler + MDC 예제 | - | pip |
+| `simple-jobs-python-fastapi-with-mdc`| Python / FastAPI + APScheduler + MDC 예제 | - | pip |
 
 #### Spring Boot (Maven / Gradle)
 
@@ -285,6 +290,18 @@ npm install && npm start
 # NestJS
 cd simple-jobs-node-nestjs
 npm install && npm run start:dev
+
+# Express + MDC
+cd simple-jobs-node-express-with-mdc
+npm install && npm start
+
+# Fastify + MDC
+cd simple-jobs-node-fastify-with-mdc
+npm install && npm start
+
+# NestJS + MDC
+cd simple-jobs-node-nestjs-with-mdc
+npm install && npm run start:dev
 ```
 
 > **Node.js v24 주의** : `better-sqlite3` 는 `^12.9.0` 이상 필요 (C++20 요구사항)  
@@ -301,6 +318,18 @@ python main.py
 
 # FastAPI + APScheduler
 cd simple-jobs-python-fastapi
+python -m venv venv && source venv/bin/activate
+pip install -r requirements.txt
+python main.py
+
+# Flask + APScheduler + MDC
+cd simple-jobs-python-flask-with-mdc
+python -m venv venv && source venv/bin/activate
+pip install -r requirements.txt
+python main.py
+
+# FastAPI + APScheduler + MDC
+cd simple-jobs-python-fastapi-with-mdc
 python -m venv venv && source venv/bin/activate
 pip install -r requirements.txt
 python main.py

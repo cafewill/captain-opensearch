@@ -162,11 +162,18 @@ lib/simple-lib-python-opensearch-appender-1.0.0/   ← Python 공용 OpenSearch 
 # 배치잡 앱
 simple-jobs-spring-maven/                          ← Spring Boot 3.5 + Maven
 simple-jobs-spring-gradle/                         ← Spring Boot 3.5 + Gradle
+simple-jobs-spring-maven-with-mdc/                 ← Spring Boot 3.5 + Maven + MDC 예제
+simple-jobs-spring-gradle-with-mdc/                ← Spring Boot 3.5 + Gradle + MDC 예제
 simple-jobs-node-express/                          ← Node.js / Express
 simple-jobs-node-fastify/                          ← Node.js / Fastify
 simple-jobs-node-nestjs/                           ← Node.js / NestJS
+simple-jobs-node-express-with-mdc/                 ← Node.js / Express + MDC 예제
+simple-jobs-node-fastify-with-mdc/                 ← Node.js / Fastify + MDC 예제
+simple-jobs-node-nestjs-with-mdc/                  ← Node.js / NestJS + MDC 예제
 simple-jobs-python-flask/                          ← Python / Flask + APScheduler
 simple-jobs-python-fastapi/                        ← Python / FastAPI + APScheduler
+simple-jobs-python-flask-with-mdc/                 ← Python / Flask + APScheduler + MDC 예제
+simple-jobs-python-fastapi-with-mdc/               ← Python / FastAPI + APScheduler + MDC 예제
 
 # REST API 앱
 simple-rest-spring-maven/                          ← Spring Boot 3.5 + MyBatis (포트 9201)
@@ -239,6 +246,9 @@ cp .env-example .env
 | `simple-jobs-node-express/src/opensearch-job-appender.js` | Node.js / Express | Job |
 | `simple-jobs-node-fastify/src/opensearch-job-appender.js` | Node.js / Fastify | Job |
 | `simple-jobs-node-nestjs/src/opensearch.job-appender.ts` | Node.js / NestJS | Job |
+| `simple-jobs-node-express-with-mdc/src/opensearch-job-appender.js` | Node.js / Express + MDC | Job |
+| `simple-jobs-node-fastify-with-mdc/src/opensearch-job-appender.js` | Node.js / Fastify + MDC | Job |
+| `simple-jobs-node-nestjs-with-mdc/src/opensearch.job-appender.ts` | Node.js / NestJS + MDC | Job |
 | `lib/simple-lib-python-opensearch-appender-1.0.0/opensearch_appender/job_appender.py` | Python | Job |
 | `simple-lib-spring-opensearch-appender/src/main/java/com/cube/opensearch/OpenSearchJobAppender.java` | Spring Boot | Job |
 | `simple-rest-node-express/src/opensearch-web-appender.js` | Node.js / Express | Web |
