@@ -157,6 +157,8 @@ opensearch-dashboards-3.3.0.yml                    ← Dashboards 설정 (3.3.0)
 
 # 공용 라이브러리
 simple-lib-spring-opensearch-appender/             ← Spring Boot 공용 OpenSearch Appender 라이브러리 (com.cube:1.0.0)
+lib/simple-lib-spring-opensearch-appender-3.0.0/   ← Spring Boot 공용 OpenSearch Appender 라이브러리 (com.cube:3.0.0)
+lib/simple-lib-spring-opensearch-appender-bulk-only-3.0.0/ ← Spring Boot bulk-only OpenSearch Appender 라이브러리 (com.cube:3.0.0)
 lib/simple-lib-python-opensearch-appender-1.0.0/   ← Python 공용 OpenSearch Appender 라이브러리 (opensearch-appender:1.0.0)
 
 # 배치잡 앱

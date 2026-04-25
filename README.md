@@ -75,10 +75,13 @@ MDC 예제 앱에서 추가로 적재되는 대표 필드는 아래와 같습니
 | 디렉터리 | groupId | artifactId | version |
 |---|---|---|---|
 | `lib/simple-lib-spring-opensearch-appender-3.0.0` | `com.cube` | `simple-lib-spring-opensearch-appender` | `3.0.0` |
+| `lib/simple-lib-spring-opensearch-appender-bulk-only-3.0.0` | `com.cube` | `simple-lib-spring-opensearch-appender-bulk-only` | `3.0.0` |
 
 Spring Boot 배치잡/REST API 앱이 공통으로 사용하는 OpenSearch Appender 라이브러리.  
 Maven Central 에 배포되지 않으므로 **개발자 로컬 `.m2` 저장소에 직접 설치**해야 한다.  
 설치 후 각 Spring Boot 앱이 일반 Maven/Gradle 의존성처럼 참조한다.
+
+`bulk-only` 변형은 패키지명, 클래스명, 설정 파라미터를 동일하게 유지하되 `<operation>` 값을 OpenSearch `_bulk` 의 `index` / `create` 액션으로만 제한한다.
 
 #### 설치 방법
 
