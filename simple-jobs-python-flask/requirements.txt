@@ -3,4 +3,4 @@ apscheduler>=3.10.0
 python-dotenv>=1.0.0
 tenacity>=8.2.0
 waitress>=3.0.0
-../simple-lib-python-opensearch-appender
+../lib/simple-lib-python-opensearch-appender-1.0.0
