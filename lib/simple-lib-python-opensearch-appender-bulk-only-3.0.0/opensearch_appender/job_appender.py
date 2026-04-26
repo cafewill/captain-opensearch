@@ -23,12 +23,13 @@ class OpenSearchJobAppender:
         max_batch_bytes=1_000_000,
         flush_interval_seconds=1,
         queue_size=8192,
-        operation='create',
+        operation='index',
         trust_all_ssl=True,
         timeout=10,
         max_retries=3,
         headers=None,
         persistent_writer_thread=True,
+        requeue_on_failure=True,
     ):
         self._index       = f'logs-{app}'
         self._app         = app
@@ -38,6 +39,7 @@ class OpenSearchJobAppender:
         self._max_retries = max(0, int(max_retries))
         self._interval    = flush_interval_seconds
         self._persistent_writer_thread = persistent_writer_thread
+        self._requeue_on_failure = requeue_on_failure
         self._queue       = queue.Queue(maxsize=queue_size)
         self._retry       = []  # 전송 실패 항목 — 다음 _flush() 에서 우선 처리
         self._sender      = BulkOnlySender(
@@ -135,6 +137,9 @@ class OpenSearchJobAppender:
                 time.sleep(0.1)
 
         print(f'[OpenSearch] 전송 재시도 초과: {result.message}', flush=True)
+        if not self._requeue_on_failure:
+            print(f'[OpenSearch] {len(current)}건 유실 (재큐 비활성)', flush=True)
+            return
         if len(self._retry) + len(current) <= self._queue.maxsize:
             self._retry = current + self._retry
         else:

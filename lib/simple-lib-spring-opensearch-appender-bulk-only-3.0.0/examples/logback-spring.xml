@@ -45,9 +45,10 @@
 
         <!-- 재시도 -->
         <maxRetries>3</maxRetries>
+        <requeueOnFailure>true</requeueOnFailure>
 
         <!-- 벌크 작업 방식 (bulk-only: index / create) -->
-        <operation>create</operation>
+        <operation>index</operation>
 
         <!-- 타임스탬프 포맷 (JVM 기본 타임존 사용, Asia/Seoul 예: yyyy-MM-dd'T'HH:mm:ss.SSSXXX) -->
         <!-- <timestampFormat>yyyy-MM-dd'T'HH:mm:ss.SSSXXX</timestampFormat> -->

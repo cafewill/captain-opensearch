@@ -17,7 +17,7 @@ function toOffsetIso(date: Date, offsetMinutes: number): string {
 
 function normalizeOperation(operation?: string): 'index' | 'create' {
   const value = String(operation || '').trim().toLowerCase();
-  return value === 'index' || value === 'create' ? value : 'create';
+  return value === 'index' || value === 'create' ? value : 'index';
 }
 
 function bulkUrl(url: string): string {
@@ -52,6 +52,7 @@ export interface OpenSearchWebAppenderConfig {
   maxRetries?:           number;
   headers?:              Record<string, string>;
   persistentWriterThread?: boolean;
+  requeueOnFailure?: boolean;
 }
 
 @Injectable()
@@ -68,6 +69,7 @@ export class OpenSearchWebAppender implements NestMiddleware {
   private readonly maxRetries: number;
   private readonly headers:    Record<string, string>;
   private readonly persistentWriterThread: boolean;
+  private readonly requeueOnFailure: boolean;
   private readonly auth:       string | null;
   private readonly lib:        typeof https | typeof http;
   private readonly parsed:     URL;
@@ -84,12 +86,13 @@ export class OpenSearchWebAppender implements NestMiddleware {
     const maxBatchBytes       = parseInt(process.env.OPENSEARCH_BATCH_MAX_BYTES      ?? '1000000');
     const flushIntervalSeconds = parseInt(process.env.OPENSEARCH_BATCH_FLUSH_INTERVAL ?? '1');
     const queueSize           = parseInt(process.env.OPENSEARCH_BATCH_QUEUE_SIZE     ?? '8192');
-    const operation           = process.env.OPENSEARCH_BULK_OPERATION ?? 'create';
+    const operation           = process.env.OPENSEARCH_BULK_OPERATION ?? 'index';
     const trustAllSsl         = envBool('OPENSEARCH_TRUST_ALL_SSL', true);
     const timeout             = parseInt(process.env.OPENSEARCH_TIMEOUT ?? '10');
     const maxRetries          = parseInt(process.env.OPENSEARCH_MAX_RETRIES ?? '3');
     const headers             = envHeaders();
     const persistentWriterThread = envBool('OPENSEARCH_PERSISTENT_WRITER_THREAD', true);
+    const requeueOnFailure    = envBool('OPENSEARCH_REQUEUE_ON_FAILURE', true);
 
     this.index      = `logs-${app}`;
     this.app        = app;
@@ -103,6 +106,7 @@ export class OpenSearchWebAppender implements NestMiddleware {
     this.maxRetries = Math.max(0, maxRetries);
     this.headers    = headers;
     this.persistentWriterThread = persistentWriterThread;
+    this.requeueOnFailure = requeueOnFailure;
     this.auth       = username ? Buffer.from(`${username}:${password}`).toString('base64') : null;
     this.parsed     = new URL(bulkUrl(url));
     this.lib        = this.parsed.protocol === 'https:' ? https : http;
@@ -247,6 +251,10 @@ export class OpenSearchWebAppender implements NestMiddleware {
   private retryOrRequeue(items: Array<{ index: string; doc: Record<string, unknown> }>, message: string, attempt: number): void {
     if (attempt < this.maxRetries) {
       setTimeout(() => this.send(this.buildPayload(items), items, attempt + 1), 100);
+      return;
+    }
+    if (!this.requeueOnFailure) {
+      console.error(`[OpenSearch] 전송 실패, ${items.length}건 유실 (재큐 비활성): ${message}`);
       return;
     }
     if (this.queue.length + items.length <= this.maxQueue) {

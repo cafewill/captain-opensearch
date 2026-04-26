@@ -39,12 +39,13 @@ appender = OpenSearchJobAppender(
     max_batch_bytes=int(os.getenv('OPENSEARCH_BATCH_MAX_BYTES', '1000000')),
     flush_interval_seconds=int(os.getenv('OPENSEARCH_BATCH_FLUSH_INTERVAL', '1')),
     queue_size=int(os.getenv('OPENSEARCH_BATCH_QUEUE_SIZE', '8192')),
-    operation=os.getenv('OPENSEARCH_BULK_OPERATION', 'create'),
+    operation=os.getenv('OPENSEARCH_BULK_OPERATION', 'index'),
     trust_all_ssl=env_bool('OPENSEARCH_TRUST_ALL_SSL', True),
     timeout=int(os.getenv('OPENSEARCH_TIMEOUT', '10')),
     max_retries=int(os.getenv('OPENSEARCH_MAX_RETRIES', '3')),
     headers=env_headers(),
     persistent_writer_thread=env_bool('OPENSEARCH_PERSISTENT_WRITER_THREAD', True),
+    requeue_on_failure=env_bool('OPENSEARCH_REQUEUE_ON_FAILURE', True),
 )
 
 

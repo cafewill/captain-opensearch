@@ -15,7 +15,7 @@ function _toOffsetIso(date, offsetMinutes) {
 
 function _normalizeOperation(operation) {
   const value = String(operation || '').trim().toLowerCase();
-  return value === 'index' || value === 'create' ? value : 'create';
+  return value === 'index' || value === 'create' ? value : 'index';
 }
 
 function _bulkUrl(url) {
@@ -41,12 +41,13 @@ class OpenSearchJobAppender {
     maxBatchBytes        = 1_000_000,
     flushIntervalSeconds = 1,
     queueSize            = 8192,
-    operation            = 'create',
+    operation='index',
     trustAllSsl          = true,
     timeout              = 10,
     maxRetries           = 3,
     headers              = {},
     persistentWriterThread = true,
+    requeueOnFailure = true,
   } = {}) {
     this._index      = `logs-${app}`;
     this._app        = app;
@@ -60,6 +61,7 @@ class OpenSearchJobAppender {
     this._maxRetries = Math.max(0, maxRetries);
     this._headers    = headers || {};
     this._persistentWriterThread = persistentWriterThread;
+    this._requeueOnFailure = requeueOnFailure;
     this._queue      = [];
     this._auth       = username
       ? Buffer.from(`${username}:${password}`).toString('base64')
@@ -197,6 +199,10 @@ class OpenSearchJobAppender {
   _retryOrRequeue(items, message, attempt) {
     if (attempt < this._maxRetries) {
       setTimeout(() => this._send(this._buildPayload(items), items, attempt + 1), 100);
+      return;
+    }
+    if (!this._requeueOnFailure) {
+      console.error(`[OpenSearch] 전송 실패, ${items.length}건 유실 (재큐 비활성): ${message}`);
       return;
     }
     if (this._queue.length + items.length <= this._maxQueue) {

@@ -43,13 +43,14 @@ public abstract class AbstractOpenSearchAppender extends UnsynchronizedAppenderB
     private boolean objectSerialization = false;
     private String autoStackTraceLevel = "OFF";
     private int resolvedAutoStackTraceLevelInt = Level.OFF.levelInt;
-    private String operation = "create";
+    private String operation = "index";
     private boolean includeKvp = false;
     private int maxBatchSize = -1;
     private String timestampFormat;
     private boolean trustAllSsl = true;
     private boolean includeStructuredArgs = false;
     private boolean persistentWriterThread = true;
+    private boolean requeueOnFailure = true;
 
     private OpenSearchHeaders headers;
     private OpenSearchProperties properties;
@@ -254,17 +255,45 @@ public abstract class AbstractOpenSearchAppender extends UnsynchronizedAppenderB
                 if (attempt >= maxRetries) {
                     reportFailure("OpenSearch retry exhausted: " + result.message(), result.cause());
                     addWarn("OpenSearch retry exhausted: " + result.message());
+                    requeueOrDrop(current, result.message());
                     return;
                 }
                 Thread.sleep(sleepTime);
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
                 reportFailure("Interrupted during retry", e);
+                requeueOrDrop(current, "Interrupted during retry");
                 return;
             } catch (Exception e) {
                 reportFailure("Unexpected send failure", e);
+                requeueOrDrop(current, "Unexpected send failure");
                 return;
             }
+        }
+    }
+
+    private void requeueOrDrop(List<BulkPayloadBuilder.BulkItem> items, String reason) {
+        if (!requeueOnFailure || items == null || items.isEmpty()) {
+            return;
+        }
+        int requeued = 0;
+        int dropped = 0;
+        for (BulkPayloadBuilder.BulkItem item : items) {
+            ILoggingEvent event = item.event();
+            if (event != null && queue.offer(event)) {
+                requeued++;
+            } else {
+                dropped++;
+            }
+        }
+        if (requeued > 0) {
+            addWarn("OpenSearch send failed, requeued " + requeued + " events: " + reason);
+            if (!persistentWriterThread) {
+                startWriterIfNeeded();
+            }
+        }
+        if (dropped > 0) {
+            addWarn("OpenSearch send failed, dropped " + dropped + " events (queue full): " + reason);
         }
     }
 
@@ -335,14 +364,14 @@ public abstract class AbstractOpenSearchAppender extends UnsynchronizedAppenderB
     }
     public void setOperation(String operation) {
         if (operation == null || operation.isBlank()) {
-            addWarn("Invalid value for [operation], using create");
-            this.operation = "create";
+            addWarn("Invalid value for [operation], using index");
+            this.operation = "index";
             return;
         }
         String lower = operation.trim().toLowerCase();
         if (!lower.equals("index") && !lower.equals("create")) {
-            addWarn("Bulk-only appender supports only [index] or [create] for [operation]: " + operation + ", using create");
-            this.operation = "create";
+            addWarn("Bulk-only appender supports only [index] or [create] for [operation]: " + operation + ", using index");
+            this.operation = "index";
             return;
         }
         this.operation = lower;
@@ -353,6 +382,7 @@ public abstract class AbstractOpenSearchAppender extends UnsynchronizedAppenderB
     public void setTrustAllSsl(boolean trustAllSsl) { this.trustAllSsl = trustAllSsl; }
     public void setIncludeStructuredArgs(boolean includeStructuredArgs) { this.includeStructuredArgs = includeStructuredArgs; }
     public void setPersistentWriterThread(boolean persistentWriterThread) { this.persistentWriterThread = persistentWriterThread; }
+    public void setRequeueOnFailure(boolean requeueOnFailure) { this.requeueOnFailure = requeueOnFailure; }
     public void setHeaders(OpenSearchHeaders headers) { this.headers = headers; }
     public void setProperties(OpenSearchProperties properties) { this.properties = properties; }
 }

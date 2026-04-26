@@ -23,7 +23,7 @@
 		</dependency>
 		<dependency>
 			<groupId>com.cube</groupId>
-			<artifactId>simple-lib-spring-opensearch-appender</artifactId>
+			<artifactId>simple-lib-spring-opensearch-appender-bulk-only</artifactId>
 			<version>3.0.0</version>
 		</dependency>
 		<dependency>
