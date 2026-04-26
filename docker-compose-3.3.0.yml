@@ -25,9 +25,9 @@ services:
       timeout: 10s
       retries: 10
 
-  opensearch-dashboards330:
+  opensearch330-dashboards:
     image: opensearchproject/opensearch-dashboards:3.3.0
-    container_name: opensearch-dashboards330
+    container_name: opensearch330-dashboards
     volumes:
       - ./opensearch-dashboards-3.3.0.yml:/usr/share/opensearch-dashboards/config/opensearch_dashboards.yml
     ports:
