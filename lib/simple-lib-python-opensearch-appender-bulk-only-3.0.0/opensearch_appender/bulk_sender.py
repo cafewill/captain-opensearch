@@ -18,7 +18,7 @@ class BulkOnlySender:
         url,
         username='',
         password='',
-        operation='create',
+        operation='index',
         trust_all_ssl=True,
         timeout=10,
         headers=None,
@@ -98,9 +98,9 @@ class BulkOnlySender:
 
     def _normalize_operation(self, operation):
         if not operation:
-            return 'create'
+            return 'index'
         value = str(operation).strip().lower()
-        return value if value in ('index', 'create') else 'create'
+        return value if value in ('index', 'create') else 'index'
 
     def _bulk_url(self, url):
         base = (url or '').rstrip('/')

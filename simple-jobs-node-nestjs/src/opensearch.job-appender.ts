@@ -14,7 +14,7 @@ function toOffsetIso(date: Date, offsetMinutes: number): string {
 
 function normalizeOperation(operation?: string): 'index' | 'create' {
   const value = String(operation || '').trim().toLowerCase();
-  return value === 'index' || value === 'create' ? value : 'create';
+  return value === 'index' || value === 'create' ? value : 'index';
 }
 
 function bulkUrl(url: string): string {
@@ -46,6 +46,7 @@ export interface OpenSearchJobAppenderConfig {
   maxRetries?:           number;
   headers?:              Record<string, string>;
   persistentWriterThread?: boolean;
+  requeueOnFailure?: boolean;
 }
 
 interface QueueEntry {
@@ -66,6 +67,7 @@ export class OpenSearchJobAppender {
   private readonly maxRetries: number;
   private readonly headers:    Record<string, string>;
   private readonly persistentWriterThread: boolean;
+  private readonly requeueOnFailure: boolean;
   private readonly auth:       string | null;
   private readonly lib:        typeof https | typeof http;
   private readonly parsed:     URL;
@@ -82,12 +84,13 @@ export class OpenSearchJobAppender {
     maxBatchBytes        = 1_000_000,
     flushIntervalSeconds = 1,
     queueSize            = 8192,
-    operation            = 'create',
+    operation='index',
     trustAllSsl          = true,
     timeout              = 10,
     maxRetries           = 3,
     headers              = {},
     persistentWriterThread = true,
+    requeueOnFailure     = true,
   }: OpenSearchJobAppenderConfig = {}) {
     this.index      = `logs-${app}`;
     this.app        = app;
@@ -101,6 +104,7 @@ export class OpenSearchJobAppender {
     this.maxRetries = Math.max(0, maxRetries);
     this.headers    = headers;
     this.persistentWriterThread = persistentWriterThread;
+    this.requeueOnFailure = requeueOnFailure;
     this.auth       = username
       ? Buffer.from(`${username}:${password}`).toString('base64')
       : null;
@@ -236,6 +240,10 @@ export class OpenSearchJobAppender {
   private retryOrRequeue(items: QueueEntry[], message: string, attempt: number): void {
     if (attempt < this.maxRetries) {
       setTimeout(() => this.send(this.buildPayload(items), items, attempt + 1), 100);
+      return;
+    }
+    if (!this.requeueOnFailure) {
+      console.error(`[OpenSearch] 전송 실패, ${items.length}건 유실 (재큐 비활성): ${message}`);
       return;
     }
     if (this.queue.length + items.length <= this.maxQueue) {

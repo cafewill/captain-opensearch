@@ -102,10 +102,10 @@ final class BulkPayloadBuilder {
 
     private String normalizeOperation(String operation) {
         if (operation == null || operation.isBlank()) {
-            return "create";
+            return "index";
         }
         String lower = operation.trim().toLowerCase();
-        return lower.equals("index") || lower.equals("create") ? lower : "create";
+        return lower.equals("index") || lower.equals("create") ? lower : "index";
     }
 
     List<BulkItem> buildItems(List<ILoggingEvent> events) throws JsonProcessingException {

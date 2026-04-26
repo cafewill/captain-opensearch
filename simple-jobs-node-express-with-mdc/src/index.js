@@ -39,12 +39,13 @@ const appender = new OpenSearchJobAppender({
   maxBatchBytes: parseInt(process.env.OPENSEARCH_BATCH_MAX_BYTES ?? '1000000'),
   flushIntervalSeconds: parseInt(process.env.OPENSEARCH_BATCH_FLUSH_INTERVAL ?? '1'),
   queueSize: parseInt(process.env.OPENSEARCH_BATCH_QUEUE_SIZE ?? '8192'),
-  operation: process.env.OPENSEARCH_BULK_OPERATION ?? 'create',
+  operation: process.env.OPENSEARCH_BULK_OPERATION ?? 'index',
   trustAllSsl: envBool('OPENSEARCH_TRUST_ALL_SSL', true),
   timeout: parseInt(process.env.OPENSEARCH_TIMEOUT ?? '10'),
   maxRetries: parseInt(process.env.OPENSEARCH_MAX_RETRIES ?? '3'),
   headers: envHeaders(),
   persistentWriterThread: envBool('OPENSEARCH_PERSISTENT_WRITER_THREAD', true),
+  requeueOnFailure:      envBool('OPENSEARCH_REQUEUE_ON_FAILURE', true),
 });
 
 const jobProfiles = {
