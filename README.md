@@ -18,6 +18,7 @@
 5. [Index 생성 및 앱 로그 모니터링 (curl)](#5-index-생성-및-앱-로그-모니터링-curl)
 6. [Dashboards > Discover 활용](#6-dashboards--discover-활용)
 7. [Dashboards > Visualize 활용](#7-dashboards--visualize-활용)
+8. [실행 및 모니터링 화면 예시](#8-실행-및-모니터링-화면-예시)
 
 ---
 
@@ -798,26 +799,26 @@ logs-simple-jobs-python-flask-2025.01.15
 
 | 파일 | 버전 |
 |---|---|
-| `docker-compose-3.6.0.yml` | OpenSearch 3.6.0 + Dashboards 3.6.0 |
-| `docker-compose-3.3.0.yml` | OpenSearch 3.3.0 + Dashboards 3.3.0 |
+| `docker-compose-opensearch-3.6.0.yml` | OpenSearch 3.6.0 + Dashboards 3.6.0 |
+| `docker-compose-opensearch-3.3.0.yml` | OpenSearch 3.3.0 + Dashboards 3.3.0 |
 
 ### 4-2. 실행
 
 ```bash
 # OpenSearch 3.6.0 기준
-docker compose -f docker-compose-3.6.0.yml up -d
+docker compose -f docker-compose-opensearch-3.6.0.yml up -d
 
 # 상태 확인
-docker compose -f docker-compose-3.6.0.yml ps
+docker compose -f docker-compose-opensearch-3.6.0.yml ps
 
 # 로그 확인
-docker compose -f docker-compose-3.6.0.yml logs -f opensearch360
+docker compose -f docker-compose-opensearch-3.6.0.yml logs -f opensearch360
 
 # 중지
-docker compose -f docker-compose-3.6.0.yml down
+docker compose -f docker-compose-opensearch-3.6.0.yml down
 
 # 데이터까지 완전 삭제
-docker compose -f docker-compose-3.6.0.yml down -v
+docker compose -f docker-compose-opensearch-3.6.0.yml down -v
 ```
 
 ### 4-3. docker-compose 핵심 설정
@@ -1384,6 +1385,43 @@ observabilityUseCase: "batch-scheduler-tracking" and runStatus: ("slow" or "degr
 | 배치 실행 상태별 건수 | `observabilityUseCase: "batch-scheduler-tracking"` |
 | 배치 평균/최대 실행 시간 | `observabilityUseCase: "batch-scheduler-tracking"` |
 | 워커 노드별 배치 처리량 | `observabilityUseCase: "batch-scheduler-tracking"` |
+
+---
+
+## 8. 실행 및 모니터링 화면 예시
+
+`screenshots/` 디렉터리의 이미지는 앱 실행 상태와 OpenSearch Dashboards 기반 모니터링 화면을 확인하기 위한 예시입니다.
+
+| 파일명 패턴 | 의미 | 확인 포인트 |
+|---|---|---|
+| `*-apps*` | 앱 실행 | 각 샘플 앱이 실행되며 OpenSearch로 전송할 로그를 생성하는 상태 |
+| `*-discover` | Discover 를 활용한 모니터링 | `logs-*` 인덱스 패턴에서 앱 로그를 검색, 필터링, 컬럼별 조회하는 화면 |
+| `*-visualize` | Visualize 를 활용한 모니터링 | 로그 데이터를 집계하여 앱별/레벨별/시간대별 모니터링 패널로 확인하는 화면 |
+
+### 8-1. 앱 실행
+
+앱 실행 화면은 Spring Boot, Node.js, Python 등 샘플 앱을 구동한 뒤 로그가 지속적으로 생성되는지 확인하는 단계입니다.  
+이 화면에서 앱 프로세스가 정상 기동되고, 스케줄러 또는 REST API 호출을 통해 OpenSearch 적재 대상 로그가 발생하는지 확인합니다.
+
+![앱 실행 예시 1](screenshots/captain-opensearch-2026-04-26-apps01.png)
+
+![앱 실행 예시 2](screenshots/captain-opensearch-2026-04-26-apps02.png)
+
+![앱 실행 예시 3](screenshots/captain-opensearch-2026-04-26-apps03.png)
+
+### 8-2. Discover 를 활용한 모니터링
+
+Discover 화면은 `logs-*` 인덱스 패턴에 적재된 로그를 시간 범위, KQL, 필드 컬럼 기준으로 탐색하는 단계입니다.  
+`app`, `level`, `trace_id`, `http_status`, `duration_ms`, `@timestamp_kst` 같은 주요 필드를 함께 보면서 앱별 로그 흐름과 오류 발생 여부를 확인합니다.
+
+![Discover 모니터링 예시](screenshots/captain-opensearch-2026-04-26-discover.png)
+
+### 8-3. Visualize 를 활용한 모니터링
+
+Visualize 화면은 Discover에서 확인한 로그 데이터를 집계하여 운영 관점의 지표로 보는 단계입니다.  
+앱별 로그 건수, 로그 레벨 추이, HTTP 상태 코드 분포, 응답 시간, MDC 기반 관측 항목을 차트와 테이블로 구성해 반복 확인할 수 있습니다.
+
+![Visualize 모니터링 예시](screenshots/captain-opensearch-2026-04-26-visualize.png)
 
 ---
 

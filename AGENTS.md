@@ -150,8 +150,8 @@ CHANGELOG.md                                       ← 변경 이력 관리 (필
 .who                                               ← 작업자 로컬 설정 (커밋 금지)
 
 # Docker 환경
-docker-compose-3.6.0.yml                           ← OpenSearch 3.6.0 + Dashboards 실행
-docker-compose-3.3.0.yml                           ← OpenSearch 3.3.0 + Dashboards 실행
+docker-compose-opensearch-3.6.0.yml                ← OpenSearch 3.6.0 + Dashboards 실행
+docker-compose-opensearch-3.3.0.yml                ← OpenSearch 3.3.0 + Dashboards 실행
 opensearch-dashboards-3.6.0.yml                    ← Dashboards 설정 (3.6.0)
 opensearch-dashboards-3.3.0.yml                    ← Dashboards 설정 (3.3.0)
 

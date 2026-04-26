@@ -100,7 +100,7 @@ cp src/main/resources/application-example.properties src/main/resources/applicat
 OpenSearch / Dashboards 실행:
 
 ```bash
-docker compose -f docker-compose-3.6.0.yml up -d
+docker compose -f docker-compose-opensearch-3.6.0.yml up -d
 ```
 
 ## Discover 확인
