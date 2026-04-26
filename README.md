@@ -1,19 +1,18 @@
 # OpenSearch 연동 모니터링 환경 구축건
 
 다양한 기술 스택(Spring Boot, Node.js, Python)으로 구성된 배치잡·REST API 앱에  
-**커스텀 OpenSearch Appender**를 직접 구현하여 통합 로그 모니터링 환경을 구축한 데모 프로젝트입니다.
+**OpenSource Appender 커스터마이징** 기반의 OpenSearch Appender를 적용하여 통합 로그 모니터링 환경을 구축한 데모 프로젝트입니다.
 
-> **제약 조건** : 내부망 VM 운영 환경 — 추가 패키지 설치 및 커스텀 서버 설정 불가  
-> → 각 런타임의 **표준 라이브러리만** 사용하여 Appender를 직접 구현
+> **인프라 환경** : 프라이밋 클라우드 VM 운영 환경 — 추가 패키지 설치 및 커스텀 서버 설정 불가
+> → 각 런타임의 **표준 라이브러리만** 사용하고, OpenSource Appender 커스터마이징 방식으로 구현
 
 ---
 
 ## 목차
 
 0. [시작 전 — 설정 파일 준비](#0-시작-전--설정-파일-준비)
-0-1. [최근 진행 내역](#0-1-최근-진행-내역)
 1. [앱 목록 및 빌드·실행 방법](#1-앱-목록-및-빌드실행-방법)
-2. [커스텀 OpenSearch Appender 구성](#2-커스텀-opensearch-appender-구성)
+2. [공용 OpenSearch Appender 라이브러리 구성](#2-공용-opensearch-appender-라이브러리-구성)
 3. [OpenSearch 연동 로깅 항목](#3-opensearch-연동-로깅-항목)
 4. [Docker로 OpenSearch + Dashboards 실행](#4-docker로-opensearch--dashboards-실행)
 5. [Index 생성 및 앱 로그 모니터링 (curl)](#5-index-생성-및-앱-로그-모니터링-curl)
@@ -47,25 +46,6 @@ cp .env-example .env
 예시 파일(`.env-example`)에는 로컬 테스트에 필요한 모든 설정이 포함되어 있어  
 복사 후 바로 실행 가능합니다.
 
-## 0-1. 최근 진행 내역
-
-최근 반영된 주요 작업은 아래와 같습니다.
-
-- Spring 소비 앱은 `simple-lib-spring-opensearch-appender-bulk-only-3.0.0` 를 기준으로 `_bulk` 응답 분석, partial failure 처리, `trustAllSsl`, `persistentWriterThread`, `maxBatchSize`, `maxMessageSize`, `operation`, `includeKvp`, custom `headers` / `properties`, 재시도 후 재큐 설정을 보강했습니다.
-- Spring 배치 샘플 `simple-jobs-spring-maven`, `simple-jobs-spring-gradle` 에 테스트 격리용 `logback-test.xml`, `job.scheduling.enabled=false` 대응을 추가했습니다.
-- MDC 예제 앱 `simple-jobs-spring-*with-mdc`, `simple-jobs-node-*with-mdc`, `simple-jobs-python-*with-mdc` 를 추가했습니다.
-- Spring 배치 4개 앱의 OpenSearch 계정 정보는 모두 `https://localhost:9200`, `admin`, `Demo3543##` 기준으로 맞췄습니다.
-- `docker-compose-3.6.0.yml` 기준 OpenSearch 3.6.0 과 Dashboards 3.6.0 환경에서 Spring MDC 로그 적재가 가능하도록 문서와 예시 설정을 함께 갱신했습니다.
-
-MDC 예제 앱에서 추가로 적재되는 대표 필드는 아래와 같습니다.
-
-- `traceId`
-- `jobName`
-- `jobRole`
-- `framework`
-- `appVariant`
-- `mdcSample`
-
 ---
 
 ## 1. 앱 목록 및 빌드·실행 방법
@@ -80,6 +60,14 @@ MDC 예제 앱에서 추가로 적재되는 대표 필드는 아래와 같습니
 Spring Boot 배치잡/REST API 앱이 공통으로 사용하는 OpenSearch Appender 라이브러리.  
 Maven Central 에 배포되지 않으므로 **개발자 로컬 `.m2` 저장소에 직접 설치**해야 한다.  
 설치 후 각 Spring Boot 앱이 일반 Maven/Gradle 의존성처럼 참조한다.
+
+Spring Boot용 공용 라이브러리는 `lib/logback-elasticsearch-appender-3.0.19` 원본을 기준으로 구성했다.
+
+| 라이브러리 | 설명 |
+|---|---|
+| `lib/logback-elasticsearch-appender-3.0.19` | OpenSource Appender 커스터마이징 기준 원본 |
+| `lib/simple-lib-spring-opensearch-appender-3.0.0` | 원본과 동일 기능 제공 |
+| `lib/simple-lib-spring-opensearch-appender-bulk-only-3.0.0` | 본 프로젝트에서 요구하는 로그 모니터링 전용 기능 구현 |
 
 `bulk-only` 변형은 패키지명, 클래스명, 설정 파라미터를 동일하게 유지하되 `<operation>` 값을 OpenSearch `_bulk` 의 `index` / `create` 액션으로만 제한한다.
 
@@ -179,19 +167,21 @@ python main.py
 
 #### 소비 앱 import 선언
 
-**Job Appender (Flask / FastAPI 공통)**
+문서에서는 Job / Web 용도를 모두 `OpenSearchAppender` 공통 표기명으로 정리한다.
+
+**OpenSearchAppender (Flask / FastAPI Job 모듈 공통)**
 ```python
-from opensearch_appender.job_appender import OpenSearchJobAppender
+from opensearch_appender.job_appender import OpenSearchAppender
 ```
 
-**Web Appender (Flask)**
+**OpenSearchAppender (Flask Web 모듈)**
 ```python
-from opensearch_appender.web_appender_flask import OpenSearchWebAppender
+from opensearch_appender.web_appender_flask import OpenSearchAppender
 ```
 
-**Web Appender (FastAPI)**
+**OpenSearchAppender (FastAPI Web 모듈)**
 ```python
-from opensearch_appender.web_appender_fastapi import OpenSearchWebAppender
+from opensearch_appender.web_appender_fastapi import OpenSearchAppender
 ```
 
 #### 라이브러리 소스 수정 후 재설치가 필요한 경우
@@ -401,7 +391,7 @@ python main.py
 
 ---
 
-## 2. 커스텀 OpenSearch Appender 구성
+## 2. 공용 OpenSearch Appender 라이브러리 구성
 
 > 공통 설계 원칙 : **추가 의존성 최소화** — Spring Boot는 공용 Logback Appender 라이브러리, Node/Python은 각 런타임 내장 라이브러리 중심으로 구현  
 > Spring Boot 3.0.0 계열은 `OpenSearchAppender` 통합 클래스 하나를 사용하고, 배치/REST 구분 필드는 MDC 또는 custom properties로 주입한다.
@@ -520,7 +510,7 @@ opensearch.include-kvp=true
 opensearch.operation=index
 ```
 
-**④ SSL TrustAll (내부망 자가 서명 인증서 대응, 3.0.0 기본 정책)**
+**④ SSL TrustAll (프라이밋 클라우드 자가 서명 인증서 대응, 3.0.0 기본 정책)**
 
 ```java
 // OpenSearchSender 내부 — 별도 keystore 설정 없이 모든 인증서 허용
@@ -532,7 +522,7 @@ sc.init(null, new TrustManager[]{ new X509TrustManager() {
 }}, null);
 ```
 
-> 이 프로젝트는 루트 제약 조건대로 내부망 VM / 자가 서명 인증서를 기본 전제로 둔다.  
+> 이 프로젝트는 루트 인프라 환경대로 프라이밋 클라우드 VM / 자가 서명 인증서를 기본 전제로 둔다.
 > 따라서 Spring Boot appender `3.0.0`도 `trustAllSsl=true`를 기본값으로 유지한다.  
 > 외부망 또는 공인 인증서 환경에서는 `opensearch.trust-all-ssl=false`로 명시적으로 끄면 된다.
 
@@ -599,9 +589,9 @@ OPENSEARCH_PERSISTENT_WRITER_THREAD=true
 **사용 예시 (Express)**
 
 ```js
-const OpenSearchWebAppender = require('./opensearch-web-appender');
+const OpenSearchAppender = require('./opensearch-web-appender');
 
-const appender = new OpenSearchWebAppender({
+const appender = new OpenSearchAppender({
   url: process.env.OPENSEARCH_URL || 'https://localhost:9200',
   username: process.env.OPENSEARCH_USERNAME || '',
   password: process.env.OPENSEARCH_PASSWORD || '',
@@ -615,10 +605,10 @@ const appender = new OpenSearchWebAppender({
 app.use(appender.middleware());  // 모든 요청 trace_id + access log 자동 처리
 ```
 
-**SSL (내부망 자가 서명 인증서 대응)**
+**SSL (프라이밋 클라우드 자가 서명 인증서 대응)**
 
 ```js
-// trustAllSsl=true 이면 내부망 자가 서명 인증서 허용
+// trustAllSsl=true 이면 프라이밋 클라우드 자가 서명 인증서 허용
 const opts = { rejectUnauthorized: !trustAllSsl };
 ```
 
@@ -627,7 +617,7 @@ const opts = { rejectUnauthorized: !trustAllSsl };
 ```typescript
 // opensearch.web-appender.ts
 @Injectable()
-export class OpenSearchWebAppender {
+export class OpenSearchAppender {
   constructor() {
     // NestJS DI: 파라미터 타입이 Object로 추론되어 주입 불가 → process.env 직접 참조
     const scheme   = process.env.OPENSEARCH_SCHEME   ?? 'https';
@@ -664,10 +654,10 @@ OPENSEARCH_PASSWORD=Demo3543##
 
 ```python
 # main.py
-from opensearch_appender.job_appender import OpenSearchJobAppender
+from opensearch_appender.job_appender import OpenSearchAppender
 import os
 
-appender = OpenSearchJobAppender(
+appender = OpenSearchAppender(
     url         = os.getenv('OPENSEARCH_URL', 'https://localhost:9200'),
     username    = os.getenv('OPENSEARCH_USERNAME', ''),
     password    = os.getenv('OPENSEARCH_PASSWORD', ''),
@@ -685,10 +675,10 @@ appender.log('INFO', '배치잡 실행', job='system-job')
 
 ```python
 # main.py
-from opensearch_appender.web_appender_flask import OpenSearchWebAppender
+from opensearch_appender.web_appender_flask import OpenSearchAppender
 import os
 
-appender = OpenSearchWebAppender(
+appender = OpenSearchAppender(
     url         = os.getenv('OPENSEARCH_URL', 'https://localhost:9200'),
     username    = os.getenv('OPENSEARCH_USERNAME', ''),
     password    = os.getenv('OPENSEARCH_PASSWORD', ''),
@@ -712,10 +702,10 @@ def after(response):
 
 ```python
 # main.py
-from opensearch_appender.web_appender_fastapi import OpenSearchWebAppender
+from opensearch_appender.web_appender_fastapi import OpenSearchAppender
 import os
 
-appender = OpenSearchWebAppender(...)
+appender = OpenSearchAppender(...)
 
 @application.middleware('http')
 async def access_log_middleware(request: Request, call_next):
@@ -732,10 +722,10 @@ from waitress import serve
 serve(app, host='0.0.0.0', port=5201)
 ```
 
-**SSL (내부망 자가 서명 인증서 대응)**
+**SSL (프라이밋 클라우드 자가 서명 인증서 대응)**
 
 ```python
-OpenSearchJobAppender(
+OpenSearchAppender(
     url='https://localhost:9200',
     trust_all_ssl=True,
 )
@@ -844,7 +834,7 @@ services:
     healthcheck:
       test: ["CMD-SHELL", "curl -sk https://localhost:9200/_cluster/health -u admin:Demo3543## | grep -q 'yellow\\|green'"]
 
-  opensearch-dashboards360:
+  opensearch360-dashboards:
     image: opensearchproject/opensearch-dashboards:3.6.0
     ports:
       - "5601:5601"
@@ -1314,6 +1304,48 @@ duration_ms >= 200
 
 ---
 
+#### ⑦ API 성능 P95/P99 모니터링 — Heatmap / Data Table
+
+**목적** : `ApiPerformanceMonitoringMdcService`에서 생성한 API 지연 시간, P95/P99 목표, Slow Query / Slow Method 알람을 함께 확인
+
+| 설정 | 값 |
+|---|---|
+| Visualization type | Heatmap 또는 Data Table |
+| Filters | `observabilityUseCase: "api-performance-monitoring"` |
+| Metrics | Count, Average `responseTimeMs`, Max `responseTimeMs` |
+| Buckets > X-axis | Terms / `percentileTarget` 또는 Date Histogram / `@timestamp` |
+| Buckets > Y-axis | Terms / `latencyBucket` 또는 `apiScenario` |
+| Split rows (Data Table) | Terms / `apiRoute`, `queryName` |
+
+알람성 로그만 분리할 때는 다음 KQL을 사용한다.
+
+```text
+observabilityUseCase: "api-performance-monitoring" and (slowQueryAlarm: true or slowMethodAlarm: true)
+```
+
+---
+
+#### ⑧ 배치 스케줄러 실행 추적 — Data Table / Bar Chart
+
+**목적** : `BatchSchedulerTrackingMdcService`에서 생성한 배치 실행 상태, 재시도 횟수, 실행 시간, 워커 노드 분포 확인
+
+| 설정 | 값 |
+|---|---|
+| Visualization type | Data Table 또는 Vertical Bar |
+| Filters | `observabilityUseCase: "batch-scheduler-tracking"` |
+| Metrics | Count, Average `elapsed_ms`, Max `elapsed_ms` |
+| Buckets > X-axis (Bar) | Date Histogram / `@timestamp` |
+| Split series | Terms / `runStatus` |
+| Split rows (Data Table) | Terms / `jobName`, `jobGroup`, `workerNode`, `triggerType` |
+
+느린 실행 또는 성능 저하 실행만 볼 때는 다음 KQL을 사용한다.
+
+```text
+observabilityUseCase: "batch-scheduler-tracking" and runStatus: ("slow" or "degraded")
+```
+
+---
+
 ### 7-3. Dashboard 구성
 
 1. 좌측 메뉴 → **Dashboard** → **Create dashboard**
@@ -1332,6 +1364,26 @@ duration_ms >= 200
 │  느린 요청 Top 20 (Data Table)                   │
 └─────────────────────────────────────────────────┘
 ```
+
+**MDC 모니터링 대시보드 구성 예시**
+
+```
+┌─────────────────────────────┬─────────────────────────────┐
+│  API P95/P99 지연 Heatmap    │  Slow Query/Method 알람 건수 │
+├─────────────────────────────┼─────────────────────────────┤
+│  배치 실행 상태별 건수       │  배치 평균/최대 실행 시간    │
+├─────────────────────────────┼─────────────────────────────┤
+│  워커 노드별 배치 처리량     │  ERROR 로그 시간 추이        │
+└─────────────────────────────┴─────────────────────────────┘
+```
+
+| 패널 | 권장 필터 |
+|---|---|
+| API P95/P99 지연 Heatmap | `observabilityUseCase: "api-performance-monitoring"` |
+| Slow Query/Method 알람 건수 | `slowQueryAlarm: true or slowMethodAlarm: true` |
+| 배치 실행 상태별 건수 | `observabilityUseCase: "batch-scheduler-tracking"` |
+| 배치 평균/최대 실행 시간 | `observabilityUseCase: "batch-scheduler-tracking"` |
+| 워커 노드별 배치 처리량 | `observabilityUseCase: "batch-scheduler-tracking"` |
 
 ---
 
