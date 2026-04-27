@@ -95,7 +95,7 @@ final class OpenSearchSender {
     }
 
     private SendResult analyzeBulkResponse(List<BulkPayloadBuilder.BulkItem> items, String body) throws Exception {
-        if (body == null || body.isBlank()) {
+        if (body == null || body.trim().isEmpty()) {
             return SendResult.success();
         }
 
@@ -144,7 +144,7 @@ final class OpenSearchSender {
             return;
         }
         for (OpenSearchHeader header : headers.getHeaders()) {
-            if (header == null || header.getName() == null || header.getName().isBlank()) {
+            if (header == null || header.getName() == null || header.getName().trim().isEmpty()) {
                 continue;
             }
             connection.setRequestProperty(header.getName(), header.getValue() == null ? "" : header.getValue());
@@ -195,7 +195,7 @@ final class OpenSearchSender {
     }
 
     private String resolveBulkUrl() {
-        if (url == null || url.isBlank()) {
+        if (url == null || url.trim().isEmpty()) {
             return url;
         }
         return url.endsWith("/_bulk") ? url : url + "/_bulk";

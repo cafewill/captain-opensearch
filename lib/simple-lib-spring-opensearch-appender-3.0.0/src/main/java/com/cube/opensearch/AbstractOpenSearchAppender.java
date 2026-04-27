@@ -155,11 +155,11 @@ public abstract class AbstractOpenSearchAppender extends UnsynchronizedAppenderB
 
     private boolean validateConfiguration() {
         boolean valid = true;
-        if (url == null || url.isBlank()) {
+        if (url == null || url.trim().isEmpty()) {
             addError("url must not be blank");
             valid = false;
         }
-        if (index == null || index.isBlank()) {
+        if (index == null || index.trim().isEmpty()) {
             addError("index must not be blank");
             valid = false;
         }
@@ -280,13 +280,13 @@ public abstract class AbstractOpenSearchAppender extends UnsynchronizedAppenderB
     }
 
     private void mirrorPayload(String payload) {
-        if (payload == null || payload.isBlank()) {
+        if (payload == null || payload.trim().isEmpty()) {
             return;
         }
         if (logsToStderr) {
             System.err.println(payload);
         }
-        if (loggerName != null && !loggerName.isBlank()) {
+        if (loggerName != null && !loggerName.trim().isEmpty()) {
             Logger logger = LoggerFactory.getLogger(loggerName);
             logger.info(payload);
         }
@@ -300,7 +300,7 @@ public abstract class AbstractOpenSearchAppender extends UnsynchronizedAppenderB
                 System.err.println(message + " - " + cause.getMessage());
             }
         }
-        if (errorLoggerName != null && !errorLoggerName.isBlank()) {
+        if (errorLoggerName != null && !errorLoggerName.trim().isEmpty()) {
             Logger logger = LoggerFactory.getLogger(errorLoggerName);
             if (cause == null) {
                 logger.error(message);
@@ -334,7 +334,7 @@ public abstract class AbstractOpenSearchAppender extends UnsynchronizedAppenderB
         this.resolvedAutoStackTraceLevelInt = Level.toLevel(level, Level.OFF).levelInt;
     }
     public void setOperation(String operation) {
-        if (operation == null || operation.isBlank()) {
+        if (operation == null || operation.trim().isEmpty()) {
             addWarn("Invalid value for [operation], using create");
             this.operation = "create";
             return;

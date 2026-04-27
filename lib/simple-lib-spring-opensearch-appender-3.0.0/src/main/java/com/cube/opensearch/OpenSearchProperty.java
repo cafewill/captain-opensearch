@@ -8,7 +8,7 @@ public class OpenSearchProperty {
         BOOLEAN;
 
         static Type from(String value) {
-            if (value == null || value.isBlank()) {
+            if (value == null || value.trim().isEmpty()) {
                 return STRING;
             }
             try {
