@@ -160,4 +160,57 @@ opensearch.trust-all-ssl=true
 | 원본 동작 검증 또는 레퍼런스 확인 | `lib/logback-elasticsearch-appender-3.0.19` | upstream 기능 기준점 |
 | 원본과 최대한 동일한 OpenSearch 명칭 커스터마이징 검증 | `lib/simple-lib-spring-opensearch-appender-3.0.0` | create/update/delete 포함 원본 operation 범위 유지 |
 | 프로젝트 로그 모니터링 운영 예제 | `lib/simple-lib-spring-opensearch-appender-bulk-only-3.0.0` | bulk `index` 기본, partial failure 분석, retry, 재큐, persistent writer 기본값 제공 |
+| 로컬 `.m2` 설치 없이 바로 빌드·실행 | `simple-jobs-spring-maven-full` / `simple-jobs-spring-maven-bulk` | 라이브러리 소스를 프로젝트에 직접 내장 |
+
+---
+
+## 6. 소스 내장 변형 (simple-jobs-spring-maven-full / bulk)
+
+`lib/` 공용 라이브러리를 로컬 `.m2`에 설치하지 않고도 즉시 빌드·실행할 수 있도록,  
+라이브러리 소스를 `com.cube.simple.opensearch` 패키지로 Spring Boot 프로젝트에 직접 내장한 변형이다.
+
+### 6-1. 내장 구성 비교
+
+| 항목 | `simple-jobs-spring-maven-full` | `simple-jobs-spring-maven-bulk` |
+|---|---|---|
+| 기반 라이브러리 소스 | `lib/simple-lib-spring-opensearch-appender-3.0.0` | `lib/simple-lib-spring-opensearch-appender-bulk-only-3.0.0` |
+| 내장 패키지 | `com.cube.simple.opensearch` | `com.cube.simple.opensearch` |
+| 내장 파일 수 | 12개 Java 소스 | 12개 Java 소스 (3개 파일 내용 다름) |
+| pom.xml 외부 lib 의존성 | 없음 (제거됨) | 없음 (제거됨) |
+| pom.xml 추가 의존성 | `jackson-databind` (Spring Boot BOM 관리) | `jackson-databind` (Spring Boot BOM 관리) |
+| logback-spring.xml appender class | `com.cube.simple.opensearch.OpenSearchAppender` | `com.cube.simple.opensearch.OpenSearchAppender` |
+
+### 6-2. 원본 라이브러리와의 소스 차이 (bulk-only 기준)
+
+`simple-jobs-spring-maven-bulk` 에 내장된 소스는 `bulk-only-3.0.0` 기준이므로 full 변형과 다음 3개 파일이 다르다.
+
+| 파일 | full 대비 bulk-only 차이 |
+|---|---|
+| `AbstractOpenSearchAppender.java` | `operation` 기본값 `index`, `persistentWriterThread` 기본값 `true`, `requeueOnFailure` 필드·setter 추가, `requeueOrDrop()` 메서드 추가, `setOperation()` 검증이 `index`/`create`만 허용 |
+| `BulkPayloadBuilder.java` | `normalizeOperation()` 헬퍼 추가, operation 기본값 `index` |
+| `OpenSearchSender.java` | `analyzeBulkResponse()` 에서 `index`/`create` node만 처리 (update/delete 제외) |
+
+### 6-3. 실행 방법
+
+```bash
+# 소스 내장 full — 로컬 .m2 설치 없이 바로 실행
+cd simple-jobs-spring-maven-full
+cp src/main/resources/application-example.properties src/main/resources/application.properties
+./mvnw spring-boot:run
+
+# 소스 내장 bulk-only — 로컬 .m2 설치 없이 바로 실행
+cd simple-jobs-spring-maven-bulk
+cp src/main/resources/application-example.properties src/main/resources/application.properties
+./mvnw spring-boot:run
+```
+
+### 6-4. 라이브러리 소스 수정 후 반영 방법
+
+소스 내장 방식은 `lib/` 수정 후 별도 설치 과정이 없다.  
+`src/main/java/com/cube/simple/opensearch/` 아래 해당 파일을 직접 수정한 뒤 재빌드하면 된다.
+
+```bash
+# 재빌드 (full 또는 bulk)
+./mvnw package -DskipTests -q
+```
 
