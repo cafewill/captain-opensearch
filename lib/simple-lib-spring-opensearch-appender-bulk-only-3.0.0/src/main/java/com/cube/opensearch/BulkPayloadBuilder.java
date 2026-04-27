@@ -16,21 +16,23 @@ import java.time.Instant;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
 final class BulkPayloadBuilder {
-    private static final Set<String> NUMERIC_MDC_FIELDS = Set.of(
+    private static final Set<String> NUMERIC_MDC_FIELDS = Collections.unmodifiableSet(new HashSet<>(Arrays.asList(
             "http_status", "duration_ms", "elapsed_ms", "retry_count", "status"
-    );
-    private static final Set<String> BOOLEAN_MDC_FIELDS = Set.of(
+    )));
+    private static final Set<String> BOOLEAN_MDC_FIELDS = Collections.unmodifiableSet(new HashSet<>(Arrays.asList(
             "success", "retryable"
-    );
-    private static final Set<String> FIXED_DOC_FIELDS = Set.of(
+    )));
+    private static final Set<String> FIXED_DOC_FIELDS = Collections.unmodifiableSet(new HashSet<>(Arrays.asList(
             "@timestamp", "level", "thread", "logger", "message"
-    );
+    )));
 
     private static final Class<?> OBJECT_APPENDING_MARKER_CLASS;
     private static final Method GET_FIELD_NAME_METHOD;
@@ -101,7 +103,7 @@ final class BulkPayloadBuilder {
     }
 
     private String normalizeOperation(String operation) {
-        if (operation == null || operation.isBlank()) {
+        if (operation == null || isBlank(operation)) {
             return "index";
         }
         String lower = operation.trim().toLowerCase();
@@ -137,17 +139,17 @@ final class BulkPayloadBuilder {
             Map<String, String> mdcMap = event.getMDCPropertyMap();
             if (mdcMap != null && !mdcMap.isEmpty()) {
                 for (Map.Entry<String, String> entry : mdcMap.entrySet()) {
-                    if (entry.getKey() == null || entry.getKey().isBlank() || entry.getValue() == null || entry.getValue().isBlank()) {
+                    if (entry.getKey() == null || isBlank(entry.getKey()) || entry.getValue() == null || isBlank(entry.getValue())) {
                         continue;
                     }
                     if (FIXED_DOC_FIELDS.contains(entry.getKey())) {
                         continue;
                     }
                     Object coerced = coerceMdcValue(entry.getKey(), entry.getValue());
-                    if (coerced instanceof Number number) {
-                        source.putPOJO(entry.getKey(), number);
-                    } else if (coerced instanceof Boolean bool) {
-                        source.put(entry.getKey(), bool);
+                    if (coerced instanceof Number) {
+                        source.putPOJO(entry.getKey(), (Number) coerced);
+                    } else if (coerced instanceof Boolean) {
+                        source.put(entry.getKey(), (Boolean) coerced);
                     } else {
                         source.put(entry.getKey(), String.valueOf(coerced));
                     }
@@ -156,7 +158,7 @@ final class BulkPayloadBuilder {
         }
         if (includeKvp && event.getKeyValuePairs() != null) {
             for (KeyValuePair pair : event.getKeyValuePairs()) {
-                if (pair == null || pair.key == null || pair.key.isBlank() || FIXED_DOC_FIELDS.contains(pair.key)) {
+                if (pair == null || pair.key == null || isBlank(pair.key) || FIXED_DOC_FIELDS.contains(pair.key)) {
                     continue;
                 }
                 source.putPOJO(pair.key, pair.value);
@@ -170,7 +172,7 @@ final class BulkPayloadBuilder {
         }
 
         ObjectNode actionMeta = objectMapper.createObjectNode();
-        if (type != null && !type.isBlank()) {
+        if (type != null && !isBlank(type)) {
             actionMeta.put("_index", index).put("_type", type);
         } else {
             actionMeta.put("_index", index);
@@ -206,10 +208,10 @@ final class BulkPayloadBuilder {
             try {
                 String fieldName = (String) GET_FIELD_NAME_METHOD.invoke(arg);
                 Object value = OBJECT_FIELD.get(arg);
-                if (fieldName == null || fieldName.isBlank()) {
+                if (fieldName == null || isBlank(fieldName)) {
                     continue;
                 }
-                String prefixedKey = keyPrefix.isBlank() ? fieldName : keyPrefix + fieldName;
+                String prefixedKey = isBlank(keyPrefix) ? fieldName : keyPrefix + fieldName;
                 if (value == null) {
                     source.putNull(prefixedKey);
                 } else if (objectSerialization) {
@@ -241,7 +243,7 @@ final class BulkPayloadBuilder {
             source.put("@timestamp", event.getTimeStamp());
             return;
         }
-        if (timestampFormat != null && !timestampFormat.isBlank()) {
+        if (timestampFormat != null && !isBlank(timestampFormat)) {
             String formatted = DateTimeFormatter.ofPattern(timestampFormat)
                     .withZone(ZoneId.systemDefault())
                     .format(instant);
@@ -259,7 +261,7 @@ final class BulkPayloadBuilder {
             putIfNotBlank(source, "message", effective);
             return;
         }
-        if (effective == null || effective.isBlank()) {
+        if (effective == null || isBlank(effective)) {
             return;
         }
         try {
@@ -291,7 +293,7 @@ final class BulkPayloadBuilder {
     private String resolveIndex(ILoggingEvent event) {
         String date = DateTimeFormatter.ofPattern("yyyy.MM.dd").withZone(ZoneId.systemDefault())
                 .format(Instant.ofEpochMilli(event.getTimeStamp()));
-        if (indexPattern == null || indexPattern.isBlank()) {
+        if (indexPattern == null || isBlank(indexPattern)) {
             return "app-logs-" + date;
         }
         return indexPattern
@@ -327,18 +329,22 @@ final class BulkPayloadBuilder {
     }
 
     private void putIfNotBlank(ObjectNode node, String key, String value) {
-        if (value != null && !value.isBlank()) {
+        if (value != null && !isBlank(value)) {
             node.put(key, value);
         }
     }
 
+    private static boolean isBlank(String s) {
+        return s == null || s.trim().isEmpty();
+    }
+
     private List<PropertyEncoder> createPropertyEncoders(OpenSearchProperties properties) {
         if (properties == null || properties.getProperties().isEmpty()) {
-            return List.of();
+            return Collections.emptyList();
         }
         List<PropertyEncoder> encoders = new ArrayList<>();
         for (OpenSearchProperty property : properties.getProperties()) {
-            if (property == null || property.getName() == null || property.getName().isBlank()) {
+            if (property == null || property.getName() == null || isBlank(property.getName())) {
                 continue;
             }
             PatternLayout layout = new PatternLayout();
@@ -364,31 +370,54 @@ final class BulkPayloadBuilder {
             if (encoded == null) {
                 return;
             }
-            if (!property.isAllowEmpty() && encoded.isBlank()) {
+            if (!property.isAllowEmpty() && isBlank(encoded)) {
                 return;
             }
             String value = encoded.endsWith(System.lineSeparator())
                     ? encoded.substring(0, encoded.length() - System.lineSeparator().length())
                     : encoded;
+
             switch (property.getType()) {
-                case INT -> {
+                case INT:
                     try {
                         node.put(property.getName(), Long.parseLong(value.trim()));
                     } catch (NumberFormatException ignored) {
                     }
-                }
-                case FLOAT -> {
+                    break;
+                case FLOAT:
                     try {
                         node.put(property.getName(), Double.parseDouble(value.trim()));
                     } catch (NumberFormatException ignored) {
                     }
-                }
-                case BOOLEAN -> node.put(property.getName(), Boolean.parseBoolean(value.trim()));
-                case STRING -> node.put(property.getName(), value);
+                    break;
+                case BOOLEAN:
+                    node.put(property.getName(), Boolean.parseBoolean(value.trim()));
+                    break;
+                case STRING:
+                    node.put(property.getName(), value);
+                    break;
             }
         }
     }
 
-    record BulkItem(String index, String actionLine, String documentLine, ILoggingEvent event) {
+    static final class BulkItem {
+        private final String index;
+        private final String actionLine;
+        private final String documentLine;
+        private final ILoggingEvent event;
+
+        BulkItem(String index, String actionLine, String documentLine, ILoggingEvent event) {
+            this.index = index;
+            this.actionLine = actionLine;
+            this.documentLine = documentLine;
+            this.event = event;
+        }
+
+        public String index() { return index; }
+        public String actionLine() { return actionLine; }
+        public String documentLine() { return documentLine; }
+        public ILoggingEvent event() { return event; }
     }
+}
+
 }

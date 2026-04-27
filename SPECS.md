@@ -6,6 +6,35 @@
 - 원본 동일 기능 커스터마이징: `lib/simple-lib-spring-opensearch-appender-3.0.0`
 - 로그 모니터링 전용 bulk-only 구현: `lib/simple-lib-spring-opensearch-appender-bulk-only-3.0.0`
 
+---
+
+## 0. 하위 호환 및 동일 운영을 위한 설정 (Compatibility Guide)
+
+`bulk-only-3.0.0` 버전은 로그 모니터링 최적화를 위해 일부 기본값이 다르고 추가 기능(재큐, 스레드 유지 등)이 포함되어 있습니다.  
+만약 **원본(`3.0.19`) 또는 원본 커스텀(`3.0.0`) 버전과 동일한 인프라 동작 방식**으로 운영하고 싶다면, `application.properties`에서 아래 설정을 지정하십시오.
+
+### bulk-only 3.0.0 → 원본(3.0.19)과 동일한 인프라 동작으로 맞추는 설정
+
+로그 적재 방식(`index`) 및 상세 모니터링(`MDC`) 기능은 그대로 활용하면서, **내부 스레드 모델과 실패 처리 방식만** 원본과 동일하게 맞추는 권장 설정입니다.
+
+```properties
+# 1. 전용 기능인 '실패 항목 재큐' 비활성화 (원본에는 없는 기능)
+opensearch.requeue-on-failure=false
+
+# 2. 백그라운드 스레드를 계속 유지하지 않고 필요할 때만 생성 (원본 방식)
+opensearch.persistent-writer-thread=false
+
+# 3. SSL 모든 인증서 허용 유지 (프라이빗 클라우드 운영 환경 필수)
+opensearch.trust-all-ssl=true
+```
+
+### 주요 차이점 요약 (동일 운영 시 참고)
+- **Operation & MDC**: 이 프로젝트는 로그 유실 방지 및 가시성을 위해 `index`와 `MDC` 사용을 기본으로 권장하며, 원본과 달리 이 설정들은 `true` 또는 `index`로 유지하는 것을 추천합니다.
+- **Thread**: `bulk-only`는 성능을 위해 스레드를 상주시키지만(`true`), 원본은 로그가 없을 때 스레드를 종료하는 방식(`false`)을 사용합니다. 리소스가 극도로 제한된 환경에서는 `false`로 설정할 수 있습니다.
+- **SSL**: 본 프로젝트의 모든 라이브러리는 프라이빗 클라우드 대응을 위해 `trust-all-ssl=true`를 기본 권장값으로 사용합니다.
+
+---
+
 ## 1. 요약 비교
 
 | 항목 | logback-elasticsearch-appender 3.0.19 | simple-lib-spring-opensearch-appender 3.0.0 | simple-lib-spring-opensearch-appender-bulk-only 3.0.0 |
