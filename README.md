@@ -196,6 +196,29 @@ pip install --force-reinstall ../lib/simple-lib-python-opensearch-appender-bulk-
 
 ---
 
+### 1-0-2. 라이브러리 소스 내장 변형 (Spring Boot 전용, 로컬 설치 불필요)
+
+| 디렉터리 | 내장 라이브러리 | 내장 패키지 |
+|---|---|---|
+| `simple-jobs-spring-maven-full` | `lib/simple-lib-spring-opensearch-appender-3.0.0` (full) | `com.cube.simple.opensearch` |
+| `simple-jobs-spring-maven-bulk` | `lib/simple-lib-spring-opensearch-appender-bulk-only-3.0.0` (bulk-only) | `com.cube.simple.opensearch` |
+
+공용 라이브러리를 로컬 `.m2`에 설치하지 않고도 바로 빌드·실행할 수 있는 **소스 내장 변형** 프로젝트.  
+`lib/` 라이브러리 소스를 `com.cube.simple.opensearch` 패키지로 프로젝트에 직접 포함하여 `pom.xml` 외부 의존성 선언이 없어도 동작한다.  
+외부 Maven 저장소나 로컬 `.m2` 설치 없이 `./mvnw spring-boot:run` 한 줄로 바로 실행 가능하다.
+
+| 항목 | `simple-jobs-spring-maven-full` | `simple-jobs-spring-maven-bulk` |
+|---|---|---|
+| 기반 라이브러리 | `simple-lib-spring-opensearch-appender-3.0.0` | `simple-lib-spring-opensearch-appender-bulk-only-3.0.0` |
+| 기본 `operation` | `index` | `index` |
+| 기본 `persistentWriterThread` | `false` | `true` |
+| `requeueOnFailure` | 미지원 | `true` (기본) |
+| 허용 `operation` | `index`, `create`, `update`, `delete` | `index`, `create` 만 허용 |
+
+> 두 변형 모두 `logback-spring.xml` Appender 클래스 경로는 `com.cube.simple.opensearch.OpenSearchAppender` / `com.cube.simple.opensearch.OpenSearchBasicAuthentication` 를 사용한다.
+
+---
+
 ### 1-1. 프런트 앱
 
 | 디렉터리 | 기술 스택 | 포트 | 설명 |
@@ -221,6 +244,8 @@ npm run dev          # 개발 서버
 | `simple-jobs-spring-gradle` | Spring Boot 3.5 | - | Gradle |
 | `simple-jobs-spring-maven-with-mdc`  | Spring Boot 3.5 + MDC 예제 | - | Maven |
 | `simple-jobs-spring-gradle-with-mdc` | Spring Boot 3.5 + MDC 예제 | - | Gradle |
+| `simple-jobs-spring-maven-full`  | Spring Boot 3.5 + 라이브러리 소스 내장 (full, 로컬 설치 불필요) | - | Maven |
+| `simple-jobs-spring-maven-bulk`  | Spring Boot 3.5 + 라이브러리 소스 내장 (bulk-only, 로컬 설치 불필요) | - | Maven |
 | `simple-jobs-node-express`  | Node.js / Express | - | npm |
 | `simple-jobs-node-fastify`  | Node.js / Fastify | - | npm |
 | `simple-jobs-node-nestjs`   | Node.js / NestJS  | - | npm |
@@ -258,6 +283,16 @@ cp src/main/resources/application-example.properties src/main/resources/applicat
 cd simple-jobs-spring-gradle-with-mdc
 cp src/main/resources/application-example.properties src/main/resources/application.properties
 ./gradlew bootRun
+
+# Maven + 소스 내장 full (로컬 .m2 설치 불필요)
+cd simple-jobs-spring-maven-full
+cp src/main/resources/application-example.properties src/main/resources/application.properties
+./mvnw spring-boot:run
+
+# Maven + 소스 내장 bulk-only (로컬 .m2 설치 불필요)
+cd simple-jobs-spring-maven-bulk
+cp src/main/resources/application-example.properties src/main/resources/application.properties
+./mvnw spring-boot:run
 ```
 
 #### Spring Boot + MDC 연동 절차
@@ -945,7 +980,7 @@ curl -sk "https://localhost:9200/logs-simple-rest-spring-maven-$(date +%Y.%m.%d)
   }' | python3 -m json.tool
 ```
 
-### 5-4-1. Spring 배치 4개 앱 최신 로그 10건 조회
+### 5-4-1. Spring 배치 앱 최신 로그 10건 조회 (소스 내장 변형 포함)
 
 ```bash
 curl -sk -u admin:Demo3543## \
