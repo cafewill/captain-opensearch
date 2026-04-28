@@ -5,23 +5,10 @@
 
     <springProperty scope="context" name="OPENSEARCH_ENV"           source="opensearch.env"                          defaultValue="local"/>
     <springProperty scope="context" name="OPENSEARCH_NAME"          source="opensearch.name"                         defaultValue="app"/>
-    <springProperty scope="context" name="OPENSEARCH_URL"            source="opensearch.url"                          defaultValue="https://localhost:9200"/>
+    <springProperty scope="context" name="OPENSEARCH_URL"            source="opensearch.url"                          defaultValue="https://localhost:9200/_bulk"/>
     <springProperty scope="context" name="OPENSEARCH_USER"          source="opensearch.username"                     defaultValue="admin"/>
     <springProperty scope="context" name="OPENSEARCH_PASS"          source="opensearch.password"                     defaultValue=""/>
-    <springProperty scope="context" name="OPENSEARCH_MAX_BATCH_SIZE" source="opensearch.batch.max-size"              defaultValue="200"/>
-    <springProperty scope="context" name="OPENSEARCH_MESSAGE_MAX_SIZE" source="opensearch.batch.max-message-size"    defaultValue="32768"/>
-    <springProperty scope="context" name="OPENSEARCH_CONNECT_TIMEOUT" source="opensearch.connect-timeout-millis"      defaultValue="3000"/>
-    <springProperty scope="context" name="OPENSEARCH_READ_TIMEOUT"  source="opensearch.read-timeout-millis"          defaultValue="5000"/>
-    <springProperty scope="context" name="OPENSEARCH_MAX_RETRIES"   source="opensearch.max-retries"                  defaultValue="3"/>
-    <springProperty scope="context" name="OPENSEARCH_REQUEUE_ON_FAILURE" source="opensearch.requeue-on-failure"          defaultValue="true"/>
     <springProperty scope="context" name="OPENSEARCH_TRUST_ALL_SSL" source="opensearch.trust-all-ssl"                defaultValue="true"/>
-    <springProperty scope="context" name="OPENSEARCH_SLEEP_TIME" source="opensearch.sleep-time" defaultValue="250"/>
-    <springProperty scope="context" name="OPENSEARCH_MAX_QUEUE_SIZE" source="opensearch.max-queue-size" defaultValue="104857600"/>
-    <springProperty scope="context" name="OPENSEARCH_PERSISTENT_WRITER_THREAD" source="opensearch.persistent-writer-thread" defaultValue="false"/>
-    <springProperty scope="context" name="OPENSEARCH_INCLUDE_MDC"   source="opensearch.include-mdc"                  defaultValue="true"/>
-    <springProperty scope="context" name="OPENSEARCH_INCLUDE_KVP"   source="opensearch.include-kvp"                  defaultValue="true"/>
-    <springProperty scope="context" name="OPENSEARCH_OPERATION"     source="opensearch.operation"                    defaultValue="index"/>
-    <springProperty scope="context" name="OPENSEARCH_ERRORS_TO_STDERR" source="opensearch.errors-to-stderr"          defaultValue="true"/>
 
     <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
         <encoder>
@@ -41,27 +28,15 @@
         </encoder>
     </appender>
 
-    <appender name="OPENSEARCH" class="com.cube.opensearch.OpenSearchAppender">
+    <appender name="OPENSEARCH" class="com.cube.simple.elasticsearch.ElasticsearchAppender">
         <url>${OPENSEARCH_URL}</url>
         <index>logs-${OPENSEARCH_NAME}-%date{yyyy.MM.dd}</index>
-        <operation>${OPENSEARCH_OPERATION}</operation>
-        <authentication class="com.cube.opensearch.OpenSearchBasicAuthentication">
+        <authentication class="com.cube.simple.elasticsearch.config.BasicAuthentication">
             <username>${OPENSEARCH_USER}</username>
             <password>${OPENSEARCH_PASS}</password>
         </authentication>
-        <maxBatchSize>${OPENSEARCH_MAX_BATCH_SIZE}</maxBatchSize>
-        <maxMessageSize>${OPENSEARCH_MESSAGE_MAX_SIZE}</maxMessageSize>
-        <sleepTime>${OPENSEARCH_SLEEP_TIME}</sleepTime>
-        <maxQueueSize>${OPENSEARCH_MAX_QUEUE_SIZE}</maxQueueSize>
-        <connectTimeout>${OPENSEARCH_CONNECT_TIMEOUT}</connectTimeout>
-        <readTimeout>${OPENSEARCH_READ_TIMEOUT}</readTimeout>
-        <maxRetries>${OPENSEARCH_MAX_RETRIES}</maxRetries>
-        <requeueOnFailure>${OPENSEARCH_REQUEUE_ON_FAILURE}</requeueOnFailure>
         <trustAllSsl>${OPENSEARCH_TRUST_ALL_SSL}</trustAllSsl>
-        <persistentWriterThread>${OPENSEARCH_PERSISTENT_WRITER_THREAD}</persistentWriterThread>
-        <includeMdc>${OPENSEARCH_INCLUDE_MDC}</includeMdc>
-        <includeKvp>${OPENSEARCH_INCLUDE_KVP}</includeKvp>
-        <errorsToStderr>${OPENSEARCH_ERRORS_TO_STDERR}</errorsToStderr>
+        <includeMdc>true</includeMdc>
 
         <headers>
             <header>
