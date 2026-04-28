@@ -55,6 +55,8 @@ cp .env-example .env
 
 | 디렉터리 | groupId | artifactId | version |
 |---|---|---|---|
+| `lib/simple-lib-spring-opensearch-appender-whole-1.0.0` | `com.agido` | `simple-lib-spring-opensearch-appender-whole` | `1.0.0` |
+| `lib/simple-lib-spring-opensearch-appender-bulk-only-1.0.0` | `com.agido` | `simple-lib-spring-opensearch-appender-bulk-only` | `1.0.0` |
 | `lib/simple-lib-spring-opensearch-appender-3.0.0` | `com.cube` | `simple-lib-spring-opensearch-appender` | `3.0.0` |
 | `lib/simple-lib-spring-opensearch-appender-bulk-only-3.0.0` | `com.cube` | `simple-lib-spring-opensearch-appender-bulk-only` | `3.0.0` |
 
@@ -67,6 +69,8 @@ Spring Boot용 공용 라이브러리는 `lib/logback-elasticsearch-appender-3.0
 | 라이브러리 | 설명 |
 |---|---|
 | `lib/logback-elasticsearch-appender-3.0.19` | OpenSource Appender 커스터마이징 기준 원본 |
+| `lib/simple-lib-spring-opensearch-appender-whole-1.0.0` | `simple-lib-spring-elasticsearch-appender-whole-1.0.0`를 OpenSearch 네이밍으로 전환한 전체 기능 포팅 |
+| `lib/simple-lib-spring-opensearch-appender-bulk-only-1.0.0` | `simple-lib-spring-elasticsearch-appender-bulk-only-1.0.0`를 OpenSearch 네이밍으로 전환한 `index`/`create` 전용 포팅 |
 | `lib/simple-lib-spring-opensearch-appender-3.0.0` | 원본과 동일 기능 제공 |
 | `lib/simple-lib-spring-opensearch-appender-bulk-only-3.0.0` | 본 프로젝트에서 요구하는 로그 모니터링 전용 기능 구현 |
 
@@ -76,11 +80,11 @@ Spring Boot용 공용 라이브러리는 `lib/logback-elasticsearch-appender-3.0
 
 ```bash
 # 1. 라이브러리 디렉터리로 이동
-cd lib/simple-lib-spring-opensearch-appender-bulk-only-3.0.0
+cd lib/simple-lib-spring-opensearch-appender-bulk-only-1.0.0
 
 # 2. Maven Wrapper 로 빌드 & 로컬 .m2 설치
 #    (mvn 이 전역 설치되어 있으면 mvn install -q 로 대체 가능)
-../../simple-jobs-spring-maven/mvnw install -q
+../../simple-jobs-spring-maven/mvnw install -q -Dgpg.skip
 ```
 
 > **Maven Wrapper(`mvnw`)를 쓰는 이유**  
@@ -90,10 +94,10 @@ cd lib/simple-lib-spring-opensearch-appender-bulk-only-3.0.0
 #### 설치 확인
 
 ```bash
-ls ~/.m2/repository/com/cube/simple-lib-spring-opensearch-appender-bulk-only/3.0.0/
+ls ~/.m2/repository/com/agido/simple-lib-spring-opensearch-appender-bulk-only/1.0.0/
 # 아래 두 파일이 있으면 정상
-# simple-lib-spring-opensearch-appender-bulk-only-3.0.0.jar
-# simple-lib-spring-opensearch-appender-bulk-only-3.0.0.pom
+# simple-lib-spring-opensearch-appender-bulk-only-1.0.0.jar
+# simple-lib-spring-opensearch-appender-bulk-only-1.0.0.pom
 ```
 
 #### 소비 앱 의존성 선언
@@ -103,9 +107,9 @@ ls ~/.m2/repository/com/cube/simple-lib-spring-opensearch-appender-bulk-only/3.0
 **Maven (`pom.xml`)**
 ```xml
 <dependency>
-    <groupId>com.cube</groupId>
+    <groupId>com.agido</groupId>
     <artifactId>simple-lib-spring-opensearch-appender-bulk-only</artifactId>
-    <version>3.0.0</version>
+    <version>1.0.0</version>
 </dependency>
 ```
 
@@ -117,7 +121,7 @@ repositories {
 }
 
 dependencies {
-    implementation 'com.cube:simple-lib-spring-opensearch-appender-bulk-only:3.0.0'
+    implementation 'com.agido:simple-lib-spring-opensearch-appender-bulk-only:1.0.0'
 }
 ```
 
@@ -130,8 +134,8 @@ dependencies {
 라이브러리 소스를 수정한 경우 반드시 재설치 후 소비 앱을 다시 빌드해야 한다.
 
 ```bash
-cd lib/simple-lib-spring-opensearch-appender-bulk-only-3.0.0
-../../simple-jobs-spring-maven/mvnw install -q   # 재설치
+cd lib/simple-lib-spring-opensearch-appender-bulk-only-1.0.0
+../../simple-jobs-spring-maven/mvnw install -q -Dgpg.skip   # 재설치
 
 # 이후 각 소비 앱 재빌드
 cd ../../simple-jobs-spring-maven  && ./mvnw package -q -DskipTests
@@ -261,8 +265,8 @@ npm run dev          # 개발 서버
 
 ```bash
 # 공통 라이브러리 재설치가 필요한 경우 먼저 수행
-cd lib/simple-lib-spring-opensearch-appender-bulk-only-3.0.0
-../../simple-jobs-spring-maven/mvnw install -q
+cd lib/simple-lib-spring-opensearch-appender-bulk-only-1.0.0
+../../simple-jobs-spring-maven/mvnw install -q -Dgpg.skip
 
 # Maven
 cd simple-jobs-spring-maven
@@ -299,8 +303,8 @@ cp src/main/resources/application-example.properties src/main/resources/applicat
 
 Spring 배치 앱에 MDC를 얹어 OpenSearch로 함께 적재하려면 아래 순서로 진행합니다.
 
-1. `lib/simple-lib-spring-opensearch-appender-bulk-only-3.0.0` 를 로컬 `.m2` 에 설치합니다.
-2. 소비 앱 `pom.xml` 또는 `build.gradle` 에 `com.cube:simple-lib-spring-opensearch-appender-bulk-only:3.0.0` 의존성을 둡니다.
+1. `lib/simple-lib-spring-opensearch-appender-bulk-only-1.0.0` 를 로컬 `.m2` 에 설치합니다.
+2. 소비 앱 `pom.xml` 또는 `build.gradle` 에 `com.agido:simple-lib-spring-opensearch-appender-bulk-only:1.0.0` 의존성을 둡니다.
 3. `application-example.properties` 를 `application.properties` 로 복사합니다.
 4. `logback-spring.xml` 에 `OpenSearchAppender` 를 등록하고 `includeMdc=true`, `includeKvp=true`, `operation=index` 같은 값을 설정합니다.
 5. 배치 코드에서 `MDC.put("traceId", ...)`, `MDC.put("jobName", ...)` 식으로 커스텀 필드를 넣고, 로그 출력 후 `MDC.clear()` 로 정리합니다.
@@ -430,14 +434,14 @@ python main.py
 ## 2. 공용 OpenSearch Appender 라이브러리 구성
 
 > 공통 설계 원칙 : **추가 의존성 최소화** — Spring Boot는 공용 Logback Appender 라이브러리, Node/Python은 각 런타임 내장 라이브러리 중심으로 구현  
-> Spring Boot 3.0.0 계열은 `OpenSearchAppender` 통합 클래스 하나를 사용하고, 배치/REST 구분 필드는 MDC 또는 custom properties로 주입한다.
+> Spring Boot 공용 Appender는 `OpenSearchAppender` 통합 클래스 하나를 사용하고, 배치/REST 구분 필드는 MDC 또는 custom properties로 주입한다.
 
 ### 2-1. 구성 파일 위치
 
 | 앱 유형 | 기술 스택 | Appender 파일 |
 |---|---|---|
-| 배치잡 | Spring Boot | `lib/simple-lib-spring-opensearch-appender-bulk-only-3.0.0/.../OpenSearchAppender.java` |
-| REST API | Spring Boot | `lib/simple-lib-spring-opensearch-appender-bulk-only-3.0.0/.../OpenSearchAppender.java` |
+| 배치잡 | Spring Boot | `lib/simple-lib-spring-opensearch-appender-bulk-only-1.0.0/.../OpenSearchAppender.java` |
+| REST API | Spring Boot | `lib/simple-lib-spring-opensearch-appender-bulk-only-1.0.0/.../OpenSearchAppender.java` |
 | 배치잡 | Node.js | `src/opensearch-job-appender.js` (또는 `.ts`) |
 | REST API | Node.js | `src/opensearch-web-appender.js` (또는 `.ts`) |
 | 프런트 | React / Next.js | `simple-page-react-nextjs/lib/opensearch-web-appender.js` |
@@ -456,11 +460,11 @@ python main.py
 
 ### 2-3. Spring Boot — 설정 방법
 
-**① `lib/simple-lib-spring-opensearch-appender-bulk-only-3.0.0` 로컬 설치 (최초 1회)**
+**① `lib/simple-lib-spring-opensearch-appender-bulk-only-1.0.0` 로컬 설치 (최초 1회)**
 
 ```bash
-cd lib/simple-lib-spring-opensearch-appender-bulk-only-3.0.0
-../../simple-jobs-spring-maven/mvnw install -q
+cd lib/simple-lib-spring-opensearch-appender-bulk-only-1.0.0
+../../simple-jobs-spring-maven/mvnw install -q -Dgpg.skip
 ```
 
 **② 소비 앱 의존성 추가**
@@ -468,9 +472,9 @@ cd lib/simple-lib-spring-opensearch-appender-bulk-only-3.0.0
 Maven (`pom.xml`)
 ```xml
 <dependency>
-    <groupId>com.cube</groupId>
+    <groupId>com.agido</groupId>
     <artifactId>simple-lib-spring-opensearch-appender-bulk-only</artifactId>
-    <version>3.0.0</version>
+    <version>1.0.0</version>
 </dependency>
 ```
 
@@ -478,7 +482,7 @@ Gradle (`build.gradle`)
 ```gradle
 repositories { mavenLocal(); mavenCentral() }
 dependencies {
-    implementation 'com.cube:simple-lib-spring-opensearch-appender-bulk-only:3.0.0'
+    implementation 'com.agido:simple-lib-spring-opensearch-appender-bulk-only:1.0.0'
 }
 ```
 
@@ -490,30 +494,26 @@ dependencies {
 <springProperty scope="context" name="OPENSEARCH_PASS"   source="opensearch.password" defaultValue=""/>
 <springProperty scope="context" name="OPENSEARCH_NAME"   source="spring.application.name" defaultValue="app"/>
 <springProperty scope="context" name="OPENSEARCH_ENV"    source="opensearch.env"    defaultValue="local"/>
-<springProperty scope="context" name="OPENSEARCH_PERSISTENT_WRITER_THREAD" source="opensearch.persistent-writer-thread" defaultValue="true"/>
-<springProperty scope="context" name="OPENSEARCH_REQUEUE_ON_FAILURE" source="opensearch.requeue-on-failure" defaultValue="true"/>
 
-<appender name="OPENSEARCH" class="com.cube.opensearch.OpenSearchAppender">
+<appender name="OPENSEARCH" class="com.cube.simple.opensearch.OpenSearchAppender">
     <url>${OPENSEARCH_URL}</url>
     <index>logs-${OPENSEARCH_NAME}-%date{yyyy.MM.dd}</index>
     <operation>index</operation>
-    <authentication class="com.cube.opensearch.OpenSearchBasicAuthentication">
+    <authentication class="com.cube.simple.opensearch.config.BasicAuthentication">
         <username>${OPENSEARCH_USER}</username>
         <password>${OPENSEARCH_PASS}</password>
     </authentication>
     <trustAllSsl>${opensearch.trust-all-ssl:-true}</trustAllSsl>
-    <persistentWriterThread>${OPENSEARCH_PERSISTENT_WRITER_THREAD}</persistentWriterThread>
-    <requeueOnFailure>${OPENSEARCH_REQUEUE_ON_FAILURE}</requeueOnFailure>
 
     <properties>
-        <esProperty>
+        <openSearchProperty>
             <name>app</name>
             <value>${OPENSEARCH_NAME}</value>
-        </esProperty>
-        <esProperty>
+        </openSearchProperty>
+        <openSearchProperty>
             <name>env</name>
             <value>${OPENSEARCH_ENV}</value>
-        </esProperty>
+        </openSearchProperty>
     </properties>
 </appender>
 

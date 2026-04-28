@@ -41,7 +41,6 @@ public class AWSAuthentication implements Authentication {
 
     @Override
     public void addAuth(HttpURLConnection urlConnection, String body) {
-
         signer.sign(new URLConnectionSignableRequest(urlConnection, body), credentials);
     }
 
@@ -52,9 +51,6 @@ public class AWSAuthentication implements Authentication {
         return null;
     }
 
-    /**
-     * Wrapper for signing a HttpURLConnection
-     */
     private static class URLConnectionSignableRequest implements SignableRequest<HttpURLConnection> {
 
         private final HttpURLConnection urlConnection;
@@ -88,7 +84,6 @@ public class AWSAuthentication implements Authentication {
 
         @Override
         public void addParameter(String name, String value) {
-
         }
 
         @Override
@@ -123,7 +118,6 @@ public class AWSAuthentication implements Authentication {
             } catch (UnsupportedEncodingException e) {
                 throw new RuntimeException(e);
             }
-
         }
 
         @Override

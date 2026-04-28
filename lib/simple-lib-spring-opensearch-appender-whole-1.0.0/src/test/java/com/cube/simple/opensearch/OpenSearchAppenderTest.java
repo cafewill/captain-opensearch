@@ -94,7 +94,7 @@ public class OpenSearchAppenderTest {
 
     @Test
     public void should_not_publish_events_when_logger_set() {
-        String loggerName = "elastic-debug-log";
+        String loggerName = "opensearch-debug-log";
         ILoggingEvent eventToLog = mock(ILoggingEvent.class);
         given(eventToLog.getLoggerName()).willReturn(loggerName);
 
@@ -111,7 +111,7 @@ public class OpenSearchAppenderTest {
 
     @Test
     public void should_not_publish_events_when_errorlogger_set() {
-        String errorLoggerName = "elastic-error-log";
+        String errorLoggerName = "opensearch-error-log";
         ILoggingEvent eventToLog = mock(ILoggingEvent.class);
         given(eventToLog.getLoggerName()).willReturn(errorLoggerName);
 
@@ -184,9 +184,9 @@ public class OpenSearchAppenderTest {
         String index = "app-logs";
         String type = "appenderType";
         int maxQueueSize = 10;
-        String logger = "es-logger";
+        String logger = "opensearch-logger";
         String url = "http://myopensearch.mycompany.com";
-        String errorLogger = "es-error-logger";
+        String errorLogger = "opensearch-error-logger";
         int maxRetries = 10000;
         int aSleepTime = 10000;
         int readTimeout = 10000;

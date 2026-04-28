@@ -35,7 +35,7 @@ v.3.0.10
  * fixed logback serialization vulnerability
 
 v.3.0.9
- * fix bug of dead loop when get http 4xx error from Elasticsearch
+ * fix bug of dead loop when get http 4xx error from OpenSearch
 
 v.3.0.8
  * added enum values for update & delete

@@ -35,5 +35,4 @@ public class OpenSearchProperties {
     public void addOpenSearchProperty(Property property) {
         properties.add(property);
     }
-
 }

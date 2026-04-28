@@ -17,7 +17,7 @@ public class OpenSearchProperties {
         }
     }
 
-    public void addEsProperty(OpenSearchProperty property) {
+    public void addOpenSearchProperty(OpenSearchProperty property) {
         addProperty(property);
     }
 

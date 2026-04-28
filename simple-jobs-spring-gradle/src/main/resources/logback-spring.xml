@@ -46,19 +46,19 @@
         </headers>
 
         <properties>
-            <esProperty>
+            <openSearchProperty>
                 <name>app</name>
                 <value>${OPENSEARCH_NAME}</value>
-            </esProperty>
-            <esProperty>
+            </openSearchProperty>
+            <openSearchProperty>
                 <name>env</name>
                 <value>${OPENSEARCH_ENV}</value>
-            </esProperty>
-            <esProperty>
+            </openSearchProperty>
+            <openSearchProperty>
                 <name>stack_trace</name>
                 <value>%ex{full}</value>
                 <allowEmpty>false</allowEmpty>
-            </esProperty>
+            </openSearchProperty>
         </properties>
     </appender>
 
