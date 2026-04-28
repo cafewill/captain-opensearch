@@ -37,7 +37,7 @@
 
 		<dependency>
 			<groupId>com.agido</groupId>
-			<artifactId>simple-lib-spring-elasticsearch-appender-whole</artifactId>
+			<artifactId>simple-lib-spring-opensearch-appender-bulk-only</artifactId>
 			<version>1.0.0</version>
 		</dependency>
 
