@@ -1,0 +1,187 @@
+Logback OpenSearch Appender
+===============================
+
+Send log events directly from Logback to OpenSearch. Logs are delivered asynchronously (i.e. not on the main thread) so will not block execution of the program. Note that the queue backlog can be bounded and messages *can* be lost if OpenSearch is down and either the backlog queue is full or the producer program is trying to exit (it will retry up to a configured number of attempts, but will not block shutdown of the program beyond that). For long-lived programs, this should not be a problem, as messages should be delivered eventually.
+
+This software is dual-licensed under the EPL 1.0 and LGPL 2.1, which is identical to the [Logback License](http://logback.qos.ch/license.html) itself.
+
+Info
+====
+This project is a fork of internetitem/logback-opensearch-appender, which was last committed in 2017. I decided to fork the project and detach it to continue development. Bugfixes and urgent PR were brought together in this project.
+
+
+Usage
+=====
+Include slf4j and logback as usual (depending on this library will *not* automatically pull them in).
+
+In your `pom.xml` (or equivalent), add:
+
+     <dependency>
+        <groupId>com.agido</groupId>
+        <artifactId>simple-lib-spring-opensearch-appender-whole</artifactId>
+        <version>1.0.0</version>
+     </dependency>
+
+In your `logback.xml`:
+
+        <appender name="OPENSEARCH" class="com.cube.simple.opensearch.OpenSearchAppender">
+            <url>http://yourserver/_bulk</url>
+            <index>logs-%date{yyyy-MM-dd}</index>
+            <type>tester</type>
+            <loggerName>opensearch-logger</loggerName> <!-- optional -->
+            <errorLoggerName>opensearch-error-logger</errorLoggerName> <!-- optional -->
+            <connectTimeout>30000</connectTimeout> <!-- optional (in ms, default 30000) -->
+            <errorsToStderr>false</errorsToStderr> <!-- optional (default false) -->
+            <includeCallerData>false</includeCallerData> <!-- optional (default false) -->
+            <logsToStderr>false</logsToStderr> <!-- optional (default false) -->
+            <maxQueueSize>104857600</maxQueueSize> <!-- optional (default 104857600) -->
+            <maxRetries>3</maxRetries> <!-- optional (default 3) -->
+            <readTimeout>30000</readTimeout> <!-- optional (in ms, default 30000) -->
+            <sleepTime>250</sleepTime> <!-- optional (in ms, default 250) -->
+            <maxBatchSize>-1</maxBatchSize> <!-- optional (default -1, unlimited) -->
+            <rawJsonMessage>false</rawJsonMessage> <!-- optional (default false) -->
+            <includeMdc>false</includeMdc> <!-- optional (default false) -->
+            <includeKvp>false</includeKvp> <!-- optional (default false) -->
+            <maxMessageSize>100</maxMessageSize> <!-- optional (default -1 -->
+            <authentication class="com.cube.simple.opensearch.config.BasicAuthentication" /> <!-- optional -->
+            <objectSerialization>true</objectSerialization> <!-- optional (default false) -->
+            <keyPrefix>data.</keyPrefix> <!-- optional (default None) -->
+            <operation>index</operation> <!-- optional (supported: index, create, update, delete - default create) -->
+            <timestampFormat>yyyy-MM-dd'T'HH:mm:ss.SSSZ</timestampFormat>  <!-- optional (default None  if set long to the timestamp milliseconds long value) -->
+            <properties>
+                <!-- please note that <property> tags are also supported, openSearchProperty was added for logback-1.3 compatibility -->
+                <openSearchProperty>
+                    <name>host</name>
+                    <value>${HOSTNAME}</value>
+                    <allowEmpty>false</allowEmpty>
+                </openSearchProperty>
+                <openSearchProperty>
+                    <name>severity</name>
+                    <value>%level</value>
+                </openSearchProperty>
+                <openSearchProperty>
+                    <name>thread</name>
+                    <value>%thread</value>
+                </openSearchProperty>
+                <openSearchProperty>
+                    <name>stacktrace</name>
+                    <value>%ex</value>
+                </openSearchProperty>
+                <openSearchProperty>
+                    <name>logger</name>
+                    <value>%logger</value>
+                </openSearchProperty>
+            </properties>
+            <headers>
+                <header>
+                    <name>Content-Type</name>
+                    <value>application/json</value>
+                </header>
+            </headers>
+        </appender>
+
+        <root level="info">
+            <appender-ref ref="FILELOGGER" />
+            <appender-ref ref="OPENSEARCH" />
+        </root>
+
+        <logger name="opensearch-error-logger" level="INFO" additivity="false">
+            <appender-ref ref="FILELOGGER" />
+        </logger>
+
+        <logger name="opensearch-logger" level="INFO" additivity="false">
+            <appender name="ES_FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+                <!-- ... -->
+                <encoder>
+                    <pattern>%msg</pattern> <!-- This pattern is important, otherwise it won't be the raw OpenSearch format anyomre -->
+                </encoder>
+            </appender>
+        </logger>
+
+
+
+Configuration Reference
+=======================
+
+ * `url` (required): The URL to your OpenSearch bulk API endpoint
+ * `index` (required): Name if the index to publish to (populated using PatternLayout just like individual properties - see below)
+ * `type` (optional): OpenSearch `_type` field for records. Although this library does not require `type` to be populated, OpenSearch may, unless the configured URL includes the type (i.e. `{index}/{type}/_bulk` as opposed to `/_bulk` and `/{index}/_bulk`). See the OpenSearch [Bulk API](https://docs.opensearch.org/latest/api-reference/document-apis/bulk/) documentation for more information
+ * `sleepTime` (optional, default 250): Time (in ms) to sleep when the event queue is empty. Note: the appender drains the queue first before sleeping, so this only affects idle periods
+ * `maxBatchSize` (optional, default -1): Maximum number of events to process in a single batch. Set to -1 for unlimited (drain entire queue). Useful for controlling memory usage and ensuring predictable batch sizes
+ * `maxRetries` (optional, default 3): Number of times to attempt retrying a message on failure. Note that subsequent log messages reset the retry count to 0. This value is important if your program is about to exit (i.e. it is not producing any more log lines) but is unable to deliver some messages to ES
+ * `connectTimeout` (optional, default 30000): OpenSearch connect timeout (in ms)
+ * `readTimeout` (optional, default 30000): OpenSearch read timeout (in ms)
+ * `includeCallerData` (optional, default false): If set to `true`, save the caller data (identical to the [AsyncAppender's includeCallerData](http://logback.qos.ch/manual/appenders.html#asyncIncludeCallerData))
+ * `errorsToStderr` (optional, default false): If set to `true`, any errors in communicating with OpenSearch will also be dumped to stderr (normally they are only reported to the internal Logback Status system, in order to prevent a feedback loop)
+ * `logsToStderr` (optional, default false): If set to `true`, dump the raw OpenSearch messages to stderr
+ * `maxQueueSize` (optional, default 104,857,600 = 200MB): Maximum size (in characters) of the send buffer. After this point, *logs will be dropped*. This should only happen if OpenSearch is down, but this is a self-protection mechanism to ensure that the logging system doesn't cause the main process to run out of memory. Note that this maximum is approximate; once the maximum is hit, no new logs will be accepted until it shrinks, but any logs already accepted to be processed will still be added to the buffer
+ * `loggerName` (optional): If set, raw ES-formatted log data will be sent to this logger
+ * `errorLoggerName` (optional): If set, any internal errors or problems will be logged to this logger
+ * `rawJsonMessage` (optional, default false): If set to `true`, the log message is interpreted as pre-formatted raw JSON message.
+ * `includeMdc` (optional, default false): If set to `true`, then all [MDC](http://www.slf4j.org/api/org/slf4j/MDC.html) values will be mapped to properties on the JSON payload.
+ * `includeKvp` (optional, default false): If set to `true`, then all key-value-pairs set via [LoggingEventBuilder](https://slf4j.org/api/org/slf4j/spi/LoggingEventBuilder.html) using the [Fluent API](https://slf4j.org/manual.html#fluent) will be mapped to properties on the JSON payload.
+ * `maxMessageSize` (optional, default -1): If set to a number greater than 0, truncate messages larger than this length, then append "`..`" to denote that the message was truncated
+ * `authentication` (optional): Add the ability to send authentication headers (see below)
+ * `objectSerialization` (optional): specifies whether to use POJO to JSON serialization 
+ * `keyPrefix` (optional): objects logged within a message will also be logged separately with this prefix added
+ * `operation` (optional, default create): Possible values are: `index`, `create`, `update` & `delete`, see the OpenSearch [Bulk API](https://docs.opensearch.org/latest/api-reference/document-apis/bulk/) documentation for more information
+
+The fields `@timestamp` and `message` are always sent and can not currently be configured. Additional fields can be sent by adding `<openSearchProperty>` elements to the `<properties>` set.
+
+ * `name` (required): Key to be used in the log event
+ * `value` (required): Text string to be sent. Internally, the value is populated using a Logback PatternLayout, so all [Conversion Words](http://logback.qos.ch/manual/layouts.html#conversionWord) can be used (in addition to the standard static variable interpolations like `${HOSTNAME}`).
+ * `allowEmpty` (optional, default `false`): Normally, if the `value` results in a `null` or empty string, the field will not be sent. If `allowEmpty` is set to `true` then the field will be sent regardless
+ * `type` (optional, default `String`): type of the field on the resulting JSON message. Possible values are: `String`, `int`, `float` and `boolean`.
+
+Groovy Configuration
+====================
+
+If you configure logback using `logback.groovy`, this can be configured as follows:
+
+      import com.cube.simple.opensearch.OpenSearchAppender
+
+      appender("OPENSEARCH", OpenSearchAppender){
+      	url = 'http://yourserver/_bulk'
+      	index = 'logs-%date{yyyy-MM-dd}'
+      	type = 'log'
+      	rawJsonMessage = true
+      	errorsToStderr = true
+      	authentication = new BasicAuthentication()
+      	def configHeaders = new HttpRequestHeaders()
+      	configHeaders.addHeader(new HttpRequestHeader(name: 'Content-Type', value: 'text/plain'))
+      	headers = configHeaders
+      }
+
+      root(INFO, ["OPENSEARCH"])
+
+Authentication
+==============
+
+Authentication is a pluggable mechanism. You must specify the authentication class on the XML element itself. The currently supported classes are:
+
+* `com.cube.simple.opensearch.config.BasicAuthentication` - Supports two configuration methods:
+  * **Recommended**: Use `<username>` and `<password>` elements (no URL-encoding required):
+    ```xml
+    <authentication class="com.cube.simple.opensearch.config.BasicAuthentication">
+        <username>myuser</username>
+        <password>p@ss€word#123</password>
+    </authentication>
+    ```
+  * **Legacy**: Credentials in URL (special characters must be URL-encoded, e.g., `@` → `%40`):
+    ```xml
+    <url>http://user:p%40ssword@yourserver/_bulk</url>
+    ```
+* `com.cube.simple.opensearch.config.AWSAuthentication` - Authenticate using the AWS SDK, for use with the [Amazon OpenSearch Service](https://aws.amazon.com/opensearch-service/) (note that you will also need to include `com.amazonaws:aws-java-sdk-core` as a dependency)
+
+Logback Access
+==============
+
+Included is also an OpenSearch appender for Logback Access. The configuration is almost identical, with the following two differences:
+
+ * The Appender class name is `com.cube.simple.opensearch.OpenSearchAccessAppender`
+ * The `value` for each `openSearchProperty` uses the [Logback Access conversion words](http://logback.qos.ch/manual/layouts.html#logback-access).
+
+Prevent Major API change
+========================
+
+To prevent a major and/or breaking API change, the old packagename com.internetitem could also used

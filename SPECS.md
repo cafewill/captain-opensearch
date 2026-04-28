@@ -3,8 +3,12 @@
 이 문서는 Spring Boot용 Appender 3종의 제공 기능과 설정값을 비교한다.
 
 - 원본: `lib/logback-elasticsearch-appender-3.0.19`
+- Elasticsearch whole 1.0.0 OpenSearch 포팅: `lib/simple-lib-spring-opensearch-appender-whole-1.0.0`
+- Elasticsearch bulk-only 1.0.0 OpenSearch 포팅: `lib/simple-lib-spring-opensearch-appender-bulk-only-1.0.0`
 - 원본 동일 기능 커스터마이징: `lib/simple-lib-spring-opensearch-appender-3.0.0`
 - 로그 모니터링 전용 bulk-only 구현: `lib/simple-lib-spring-opensearch-appender-bulk-only-3.0.0`
+
+`simple-lib-spring-opensearch-appender-bulk-only-1.0.0`은 `simple-lib-spring-elasticsearch-appender-bulk-only-1.0.0`의 네이밍을 OpenSearch 기준으로 전환한 버전이다. 패키지는 `com.cube.simple.opensearch`, appender 클래스는 `com.cube.simple.opensearch.OpenSearchAppender`, 인증 클래스는 `com.cube.simple.opensearch.config.BasicAuthentication`을 사용한다. 이 버전은 bulk operation을 `index`/`create`로 제한하지만, `persistentWriterThread`/`requeueOnFailure` 같은 3.0.0 bulk-only 확장 설정은 포함하지 않는다.
 
 ---
 
@@ -158,6 +162,8 @@ opensearch.trust-all-ssl=true
 | 사용 목적 | 권장 라이브러리 | 이유 |
 |---|---|---|
 | 원본 동작 검증 또는 레퍼런스 확인 | `lib/logback-elasticsearch-appender-3.0.19` | upstream 기능 기준점 |
+| Elasticsearch 1.0.0 whole 포팅 검증 | `lib/simple-lib-spring-opensearch-appender-whole-1.0.0` | 기존 `simple-lib-spring-elasticsearch-appender-whole-1.0.0`의 OpenSearch 네이밍 전환본 |
+| Elasticsearch 1.0.0 bulk-only 포팅 검증 | `lib/simple-lib-spring-opensearch-appender-bulk-only-1.0.0` | 기존 `simple-lib-spring-elasticsearch-appender-bulk-only-1.0.0`의 OpenSearch 네이밍 전환본, `index`/`create`만 허용 |
 | 원본과 최대한 동일한 OpenSearch 명칭 커스터마이징 검증 | `lib/simple-lib-spring-opensearch-appender-3.0.0` | create/update/delete 포함 원본 operation 범위 유지 |
 | 프로젝트 로그 모니터링 운영 예제 | `lib/simple-lib-spring-opensearch-appender-bulk-only-3.0.0` | bulk `index` 기본, partial failure 분석, retry, 재큐, persistent writer 기본값 제공 |
 | 로컬 `.m2` 설치 없이 바로 빌드·실행 | `simple-jobs-spring-maven-full` / `simple-jobs-spring-maven-bulk` | 라이브러리 소스를 프로젝트에 직접 내장 |
@@ -213,4 +219,3 @@ cp src/main/resources/application-example.properties src/main/resources/applicat
 # 재빌드 (full 또는 bulk)
 ./mvnw package -DskipTests -q
 ```
-
