@@ -28,10 +28,10 @@
         </encoder>
     </appender>
 
-    <appender name="OPENSEARCH" class="com.cube.simple.elasticsearch.ElasticsearchAppender">
+    <appender name="OPENSEARCH" class="com.cube.simple.opensearch.OpenSearchAppender">
         <url>${OPENSEARCH_URL}</url>
         <index>logs-${OPENSEARCH_NAME}-%date{yyyy.MM.dd}</index>
-        <authentication class="com.cube.simple.elasticsearch.config.BasicAuthentication">
+        <authentication class="com.cube.simple.opensearch.config.BasicAuthentication">
             <username>${OPENSEARCH_USER}</username>
             <password>${OPENSEARCH_PASS}</password>
         </authentication>
