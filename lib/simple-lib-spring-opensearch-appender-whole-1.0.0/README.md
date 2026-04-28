@@ -1,3 +1,4 @@
+=======
 Logback OpenSearch Appender
 ===============================
 

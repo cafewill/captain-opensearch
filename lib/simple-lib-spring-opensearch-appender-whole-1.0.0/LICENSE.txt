@@ -1,7 +1,7 @@
 LICENSE
 -------
 
-logback-opensearch-appender
+logback-elasticsearch-appender
 Copyright (C) 2022, Joerg Malter. All rights reserved.
 Copyright (C) 2015, Adam Batkin. All rights reserved.
 

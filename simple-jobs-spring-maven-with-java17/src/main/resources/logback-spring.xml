@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+
+    <statusListener class="ch.qos.logback.core.status.OnConsoleStatusListener"/>
+
+    <springProperty scope="context" name="OPENSEARCH_ENV"           source="opensearch.env"           defaultValue="local"/>
+    <springProperty scope="context" name="OPENSEARCH_NAME"          source="opensearch.name"          defaultValue="app"/>
+    <springProperty scope="context" name="OPENSEARCH_URL"           source="opensearch.url"           defaultValue="https://localhost:9200/_bulk"/>
+    <springProperty scope="context" name="OPENSEARCH_USER"          source="opensearch.username"      defaultValue="admin"/>
+    <springProperty scope="context" name="OPENSEARCH_PASS"          source="opensearch.password"      defaultValue=""/>
+    <springProperty scope="context" name="OPENSEARCH_TRUST_ALL_SSL" source="opensearch.trust-all-ssl" defaultValue="true"/>
+
+    <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder>
+            <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n</pattern>
+            <charset>UTF-8</charset>
+        </encoder>
+    </appender>
+
+    <appender name="FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+            <fileNamePattern>log/%d{yyyyMMddHH}-${OPENSEARCH_NAME}.log</fileNamePattern>
+            <maxHistory>168</maxHistory>
+        </rollingPolicy>
+        <encoder>
+            <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n</pattern>
+            <charset>UTF-8</charset>
+        </encoder>
+    </appender>
+
+    <appender name="OPENSEARCH" class="com.cube.simple.opensearch.OpenSearchAppender">
+        <url>${OPENSEARCH_URL}</url>
+        <index>logs-${OPENSEARCH_NAME}-%date{yyyy.MM.dd}</index>
+        <authentication class="com.cube.simple.opensearch.config.BasicAuthentication">
+            <username>${OPENSEARCH_USER}</username>
+            <password>${OPENSEARCH_PASS}</password>
+        </authentication>
+        <trustAllSsl>${OPENSEARCH_TRUST_ALL_SSL}</trustAllSsl>
+        <includeMdc>true</includeMdc>
+
+        <headers>
+            <header>
+                <name>Content-Type</name>
+                <value>application/x-ndjson</value>
+            </header>
+        </headers>
+
+        <properties>
+            <esProperty>
+                <name>app</name>
+                <value>${OPENSEARCH_NAME}</value>
+            </esProperty>
+            <esProperty>
+                <name>env</name>
+                <value>${OPENSEARCH_ENV}</value>
+            </esProperty>
+            <esProperty>
+                <name>stack_trace</name>
+                <value>%ex{full}</value>
+                <allowEmpty>false</allowEmpty>
+            </esProperty>
+        </properties>
+    </appender>
+
+    <root level="INFO">
+        <appender-ref ref="CONSOLE"/>
+        <appender-ref ref="FILE"/>
+        <appender-ref ref="OPENSEARCH"/>
+    </root>
+
+</configuration>

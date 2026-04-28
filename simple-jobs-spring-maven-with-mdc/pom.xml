@@ -22,8 +22,8 @@
 			<artifactId>spring-boot-starter</artifactId>
 		</dependency>
 		<dependency>
-			<groupId>com.agido</groupId>
-			<artifactId>simple-lib-spring-opensearch-appender-bulk-only</artifactId>
+			<groupId>com.cube.simple</groupId>
+			<artifactId>simple-lib-spring-opensearch-appender-whole</artifactId>
 			<version>1.0.0</version>
 		</dependency>
 		<dependency>
