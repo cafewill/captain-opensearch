@@ -32,7 +32,7 @@ public class OpenSearchProperties {
      *
      * @param property this is called by logback for each property tag contained in the properties tag
      */
-    public void addEsProperty(Property property) {
+    public void addOpenSearchProperty(Property property) {
         properties.add(property);
     }
 
