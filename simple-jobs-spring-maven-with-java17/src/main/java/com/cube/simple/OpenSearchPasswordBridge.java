@@ -6,6 +6,9 @@ import org.springframework.boot.context.event.ApplicationEnvironmentPreparedEven
 import org.springframework.context.ApplicationListener;
 import org.springframework.core.Ordered;
 import org.springframework.core.env.ConfigurableEnvironment;
+import org.springframework.core.io.ClassPathResource;
+
+import java.util.Properties;
 
 public class OpenSearchPasswordBridge
         implements ApplicationListener<ApplicationEnvironmentPreparedEvent>, Ordered {
@@ -45,13 +48,26 @@ public class OpenSearchPasswordBridge
     }
 
     private String resolveEncryptorKey(ConfigurableEnvironment env) {
-        String key = env.getProperty("jasypt.encryptor.password", "");
-        if (key.isEmpty()) {
-            String envKey = System.getenv("JASYPT_ENCRYPTOR_PASSWORD");
-            if (envKey != null && !envKey.isEmpty()) {
-                key = envKey;
+        // 1. key.properties (classpath) → jasypt.key
+        try {
+            ClassPathResource keyResource = new ClassPathResource("key.properties");
+            if (keyResource.exists()) {
+                Properties keyProps = new Properties();
+                keyProps.load(keyResource.getInputStream());
+                String key = keyProps.getProperty("jasypt.key", "").trim();
+                if (!key.isEmpty()) {
+                    return key;
+                }
             }
+        } catch (Exception ignored) {
         }
-        return key;
+
+        // 2. 환경변수 fallback
+        String envKey = System.getenv("JASYPT_ENCRYPTOR_PASSWORD");
+        if (envKey != null && !envKey.isEmpty()) {
+            return envKey;
+        }
+
+        return "";
     }
 }
