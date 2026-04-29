@@ -22,7 +22,7 @@ import com.amazonaws.regions.Regions;
 import com.amazonaws.util.StringInputStream;
 
 /**
- * This class implements Amazon AWS v4 Signature signing for ElasticSearch.
+ * This class implements Amazon AWS v4 Signature signing for OpenSearch.
  *
  * @author blagerweij
  */
@@ -64,7 +64,7 @@ public class AWSAuthentication implements Authentication {
         public URLConnectionSignableRequest(HttpURLConnection urlConnection, String body) {
             this.urlConnection = urlConnection;
             this.body = body;
-            addHeader("User-Agent", "ElasticSearchWriter/1.0");
+            addHeader("User-Agent", "OpenSearchWriter/1.0");
             addHeader("Accept", "*/*");
             addHeader("Content-Type", "application/json");
             addHeader("Content-Length", String.valueOf(body.length()));
