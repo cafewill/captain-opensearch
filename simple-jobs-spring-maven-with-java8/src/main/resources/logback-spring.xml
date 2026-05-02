@@ -7,7 +7,7 @@
     <springProperty scope="context" name="OPENSEARCH_NAME"          source="opensearch.name"          defaultValue="app"/>
     <springProperty scope="context" name="OPENSEARCH_URL"           source="opensearch.url"           defaultValue="https://localhost:9200/_bulk"/>
     <springProperty scope="context" name="OPENSEARCH_USER"          source="opensearch.username"      defaultValue="admin"/>
-    <property name="OPENSEARCH_PASS" value="${OPENSEARCH_PASS_RESOLVED:-}" />
+    <springProperty scope="context" name="OPENSEARCH_PASS"          source="opensearch.password"      defaultValue=""/>
     <springProperty scope="context" name="OPENSEARCH_TRUST_ALL_SSL" source="opensearch.trust-all-ssl" defaultValue="true"/>
 
     <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">

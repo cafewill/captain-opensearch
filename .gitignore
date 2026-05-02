@@ -131,7 +131,6 @@ dmypy.json
 *.key
 *.p12
 *.jks
-key.properties
 
 # ────────────────────────────────────────────────────────────────────────────
 # AI 도구 로컬 설정 (Claude, ChatGPT, Gemini, Qwen 등)
