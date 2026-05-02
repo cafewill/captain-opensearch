@@ -174,6 +174,7 @@ public class DemoScheduleService {
                 log.warn("[VisionAI] Batch video analysis partial failure - batch={}, slow inference", batchSize);
             } else {
                 MDC.put("stage", "PREPROCESS");
+                Thread.sleep(ThreadLocalRandom.current().nextLong(100, 500));
                 MDC.put("processingTimeMs", String.valueOf(System.currentTimeMillis() - start));
                 MDC.put("status", "FAILED");
                 log.error("[VisionAI] Batch video analysis failed - batch={}, model inference error", batchSize);

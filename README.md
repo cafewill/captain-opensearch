@@ -38,18 +38,6 @@ cp src/main/resources/application-example.properties src/main/resources/applicat
 예시 파일(`application-example.properties`)에는 로컬 테스트에 필요한 모든 설정이 포함되어 있어  
 복사 후 바로 실행 가능합니다.
 
-**Jasypt 암호화 키 파일 준비** (`simple-jobs-spring-maven` 계열 앱 전용)
-
-```bash
-# key.properties 는 .gitignore 에 등록된 민감 파일입니다.
-# key-example.properties 를 복사한 뒤 실제 키 값으로 수정하세요.
-cp src/main/resources/key-example.properties src/main/resources/key.properties
-```
-
-`key.properties` 에 설정한 `jasypt.key` 값으로 `application.properties` 의  
-`ENC(...)` 암호화 비밀번호가 복호화됩니다.  
-운영 환경에서는 `key.properties` 대신 `JASYPT_ENCRYPTOR_PASSWORD` 환경변수를 사용하세요.
-
 ### Node.js / Python / React 프로젝트
 
 ```bash
@@ -317,12 +305,11 @@ cp src/main/resources/application-example.properties src/main/resources/applicat
 ./mvnw spring-boot:run
 
 # Maven + Java 버전별 (DemoScheduleService — 기존 잡 + Vision AI MDC 잡 포함)
-# key.properties 준비 필수: cp src/main/resources/key-example.properties src/main/resources/key.properties
-cd simple-jobs-spring-maven-with-java8   && cp src/main/resources/key-example.properties src/main/resources/key.properties && ./mvnw spring-boot:run
-cd simple-jobs-spring-maven-with-java11  && cp src/main/resources/key-example.properties src/main/resources/key.properties && ./mvnw spring-boot:run
-cd simple-jobs-spring-maven-with-java17  && cp src/main/resources/key-example.properties src/main/resources/key.properties && ./mvnw spring-boot:run
-cd simple-jobs-spring-maven-with-java21  && cp src/main/resources/key-example.properties src/main/resources/key.properties && ./mvnw spring-boot:run
-cd simple-jobs-spring-maven-with-java25  && cp src/main/resources/key-example.properties src/main/resources/key.properties && ./mvnw spring-boot:run
+cd simple-jobs-spring-maven-with-java8   && cp src/main/resources/application-example.properties src/main/resources/application.properties && ./mvnw spring-boot:run
+cd simple-jobs-spring-maven-with-java11  && cp src/main/resources/application-example.properties src/main/resources/application.properties && ./mvnw spring-boot:run
+cd simple-jobs-spring-maven-with-java17  && cp src/main/resources/application-example.properties src/main/resources/application.properties && ./mvnw spring-boot:run
+cd simple-jobs-spring-maven-with-java21  && cp src/main/resources/application-example.properties src/main/resources/application.properties && ./mvnw spring-boot:run
+cd simple-jobs-spring-maven-with-java25  && cp src/main/resources/application-example.properties src/main/resources/application.properties && ./mvnw spring-boot:run
 ```
 
 #### Spring Boot + MDC 연동 절차
