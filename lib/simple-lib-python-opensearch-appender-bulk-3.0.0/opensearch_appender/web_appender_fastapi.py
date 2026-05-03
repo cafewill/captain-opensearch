@@ -8,7 +8,7 @@ import time
 import uuid
 from datetime import datetime, timezone, timedelta
 
-from .bulk_sender import BulkOnlySender
+from .bulk_sender import BulkSender
 
 KST = timezone(timedelta(hours=9), 'KST')
 
@@ -43,7 +43,7 @@ class OpenSearchWebAppender:
         self._requeue_on_failure = requeue_on_failure
         self._queue       = queue.Queue(maxsize=queue_size)
         self._retry       = []  # 전송 실패 항목 — 다음 _flush() 에서 우선 처리
-        self._sender      = BulkOnlySender(
+        self._sender      = BulkSender(
             url=url,
             username=username,
             password=password,
@@ -80,26 +80,26 @@ class OpenSearchWebAppender:
             pass
 
     def before_request(self, request):
-        """Flask before_request 훅에서 호출 — trace_id, start_time 주입"""
-        request.trace_id   = request.headers.get('X-Request-ID') or str(uuid.uuid4())
-        request.start_time = time.time()
+        """FastAPI/Starlette before_request 훅에서 호출 — trace_id, start_time 주입"""
+        request.state.trace_id   = request.headers.get('X-Request-ID') or str(uuid.uuid4())
+        request.state.start_time = time.time()
 
     def after_request(self, request, response):
-        """Flask after_request 훅에서 호출 — 접근 로그 기록"""
-        duration_ms = int((time.time() - request.start_time) * 1000)
+        """FastAPI/Starlette after_request 훅에서 호출 — 접근 로그 기록"""
+        duration_ms = int((time.time() - request.state.start_time) * 1000)
         ts = datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')[:-3]
-        print(f'[{ts}] {request.method} {request.path} → {response.status_code} ({duration_ms}ms) [{request.trace_id}]', flush=True)
+        print(f'[{ts}] {request.method} {request.url.path} → {response.status_code} ({duration_ms}ms) [{request.state.trace_id}]', flush=True)
         self.log(
             'INFO',
-            f'{request.method} {request.path} → {response.status_code}',
-            trace_id    = request.trace_id,
+            f'{request.method} {request.url.path} → {response.status_code}',
+            trace_id    = request.state.trace_id,
             http_method = request.method,
-            http_path   = request.path,
-            client_ip   = request.remote_addr,
+            http_path   = request.url.path,
+            client_ip   = request.client.host if request.client else '',
             http_status = response.status_code,
             duration_ms = duration_ms,
         )
-        response.headers['X-Request-ID'] = request.trace_id
+        response.headers['X-Request-ID'] = request.state.trace_id
         return response
 
     def stop(self):
