@@ -8,6 +8,7 @@ build/
 !**/src/test/**/build/
 *.class
 *.jar
+!**/gradle/wrapper/gradle-wrapper.jar
 *.war
 *.ear
 *.nar
@@ -20,6 +21,7 @@ replay_pid*
 # Gradle wrapper cache
 .gradle/
 !gradle/wrapper/gradle-wrapper.jar
+!**/gradle/wrapper/gradle-wrapper.jar
 
 # Spring Boot log files
 log/
@@ -127,6 +129,9 @@ dmypy.json
 .env
 .env.*
 !.env.example
+application.properties
+application.yml
+key.yml
 *.pem
 *.key
 *.p12

@@ -1,0 +1,31 @@
+spring:
+  application:
+    name: simple-rest-spring-maven-with-java11-lib-whole
+  datasource:
+    url: jdbc:h2:mem:testdb;DB_CLOSE_DELAY=-1
+    driver-class-name: org.h2.Driver
+    username: sa
+    password:
+  h2:
+    console:
+      enabled: true
+  sql:
+    init:
+      mode: always
+
+server:
+  port: 9205
+
+mybatis:
+  mapper-locations: classpath:mapper/**/*.xml
+  configuration:
+    map-underscore-to-camel-case: true
+  type-aliases-package: com.cube.simple.model
+
+opensearch:
+  name: simple-rest-spring-maven-with-java11-lib-whole
+  env: local
+  url: https://localhost:9200/_bulk
+  username: admin
+  password: Demo3543##
+  trust-all-ssl: true

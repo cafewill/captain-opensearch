@@ -1,0 +1,32 @@
+spring:
+  application:
+    name: simple-jobs-spring-gradle-with-java11
+  main:
+    web-application-type: none
+
+job:
+  system:
+    delay: 3000
+  manager:
+    delay: 15000
+  operator:
+    delay: 20000
+  risky:
+    delay: 60000
+  vision:
+    classification:
+      delay: 5000
+    detection:
+      delay: 18000
+    ocr:
+      delay: 25000
+    batch:
+      delay: 90000
+
+opensearch:
+  name: simple-jobs-spring-gradle-with-java11
+  env: local
+  url: https://localhost:9200/_bulk
+  username: admin
+  password: Demo3543##
+  trust-all-ssl: true
