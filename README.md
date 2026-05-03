@@ -57,9 +57,9 @@ cp .env-example .env
 | 디렉터리 | groupId | artifactId | version |
 |---|---|---|---|
 | `lib/simple-lib-spring-opensearch-appender-whole-1.0.0` | `com.agido` | `simple-lib-spring-opensearch-appender-whole` | `1.0.0` |
-| `lib/simple-lib-spring-opensearch-appender-bulk-only-1.0.0` | `com.agido` | `simple-lib-spring-opensearch-appender-bulk-only` | `1.0.0` |
+| `lib/simple-lib-spring-opensearch-appender-bulk-1.0.0` | `com.agido` | `simple-lib-spring-opensearch-appender-bulk` | `1.0.0` |
 | `lib/simple-lib-spring-opensearch-appender-3.0.0` | `com.cube` | `simple-lib-spring-opensearch-appender` | `3.0.0` |
-| `lib/simple-lib-spring-opensearch-appender-bulk-only-3.0.0` | `com.cube` | `simple-lib-spring-opensearch-appender-bulk-only` | `3.0.0` |
+| `lib/simple-lib-spring-opensearch-appender-bulk-3.0.0` | `com.cube` | `simple-lib-spring-opensearch-appender-bulk` | `3.0.0` |
 
 Spring Boot 배치잡/REST API 앱이 공통으로 사용하는 OpenSearch Appender 라이브러리.  
 Maven Central 에 배포되지 않으므로 **개발자 로컬 `.m2` 저장소에 직접 설치**해야 한다.  
@@ -71,17 +71,17 @@ Spring Boot용 공용 라이브러리는 `lib/logback-elasticsearch-appender-3.0
 |---|---|
 | `lib/logback-elasticsearch-appender-3.0.19` | OpenSource Appender 커스터마이징 기준 원본 |
 | `lib/simple-lib-spring-opensearch-appender-whole-1.0.0` | `simple-lib-spring-elasticsearch-appender-whole-1.0.0`를 OpenSearch 네이밍으로 전환한 전체 기능 포팅 |
-| `lib/simple-lib-spring-opensearch-appender-bulk-only-1.0.0` | `simple-lib-spring-elasticsearch-appender-bulk-only-1.0.0`를 OpenSearch 네이밍으로 전환한 `index`/`create` 전용 포팅 |
+| `lib/simple-lib-spring-opensearch-appender-bulk-1.0.0` | `simple-lib-spring-elasticsearch-appender-bulk-1.0.0`를 OpenSearch 네이밍으로 전환한 `index`/`create` 전용 포팅 |
 | `lib/simple-lib-spring-opensearch-appender-3.0.0` | 원본과 동일 기능 제공 |
-| `lib/simple-lib-spring-opensearch-appender-bulk-only-3.0.0` | 본 프로젝트에서 요구하는 로그 모니터링 전용 기능 구현 |
+| `lib/simple-lib-spring-opensearch-appender-bulk-3.0.0` | 본 프로젝트에서 요구하는 로그 모니터링 전용 기능 구현 |
 
-`bulk-only` 변형은 패키지명, 클래스명, 설정 파라미터를 동일하게 유지하되 `<operation>` 값을 OpenSearch `_bulk` 의 `index` / `create` 액션으로만 제한한다.
+`bulk` 변형은 패키지명, 클래스명, 설정 파라미터를 동일하게 유지하되 `<operation>` 값을 OpenSearch `_bulk` 의 `index` / `create` 액션으로만 제한한다.
 
 #### 설치 방법
 
 ```bash
 # 1. 라이브러리 디렉터리로 이동
-cd lib/simple-lib-spring-opensearch-appender-bulk-only-1.0.0
+cd lib/simple-lib-spring-opensearch-appender-bulk-1.0.0
 
 # 2. Maven Wrapper 로 빌드 & 로컬 .m2 설치
 #    (mvn 이 전역 설치되어 있으면 mvn install -q 로 대체 가능)
@@ -95,10 +95,10 @@ cd lib/simple-lib-spring-opensearch-appender-bulk-only-1.0.0
 #### 설치 확인
 
 ```bash
-ls ~/.m2/repository/com/agido/simple-lib-spring-opensearch-appender-bulk-only/1.0.0/
+ls ~/.m2/repository/com/agido/simple-lib-spring-opensearch-appender-bulk/1.0.0/
 # 아래 두 파일이 있으면 정상
-# simple-lib-spring-opensearch-appender-bulk-only-1.0.0.jar
-# simple-lib-spring-opensearch-appender-bulk-only-1.0.0.pom
+# simple-lib-spring-opensearch-appender-bulk-1.0.0.jar
+# simple-lib-spring-opensearch-appender-bulk-1.0.0.pom
 ```
 
 #### 소비 앱 의존성 선언
@@ -109,7 +109,7 @@ ls ~/.m2/repository/com/agido/simple-lib-spring-opensearch-appender-bulk-only/1.
 ```xml
 <dependency>
     <groupId>com.agido</groupId>
-    <artifactId>simple-lib-spring-opensearch-appender-bulk-only</artifactId>
+    <artifactId>simple-lib-spring-opensearch-appender-bulk</artifactId>
     <version>1.0.0</version>
 </dependency>
 ```
@@ -122,7 +122,7 @@ repositories {
 }
 
 dependencies {
-    implementation 'com.agido:simple-lib-spring-opensearch-appender-bulk-only:1.0.0'
+    implementation 'com.agido:simple-lib-spring-opensearch-appender-bulk:1.0.0'
 }
 ```
 
@@ -135,7 +135,7 @@ dependencies {
 라이브러리 소스를 수정한 경우 반드시 재설치 후 소비 앱을 다시 빌드해야 한다.
 
 ```bash
-cd lib/simple-lib-spring-opensearch-appender-bulk-only-1.0.0
+cd lib/simple-lib-spring-opensearch-appender-bulk-1.0.0
 ../../simple-jobs-spring-maven/mvnw install -q -Dgpg.skip   # 재설치
 
 # 이후 각 소비 앱 재빌드
@@ -150,17 +150,17 @@ cd ../simple-rest-spring-gradle && ./gradlew build -x test -q
 | 디렉터리 | 패키지명 | version |
 |---|---|---|
 | `lib/simple-lib-python-opensearch-appender-1.0.0` | `opensearch-appender` | `1.0.0` |
-| `lib/simple-lib-python-opensearch-appender-bulk-only-3.0.0` | `opensearch-appender-bulk-only` | `3.0.0` |
+| `lib/simple-lib-python-opensearch-appender-bulk-3.0.0` | `opensearch-appender-bulk` | `3.0.0` |
 
 Python 배치잡/REST API 앱이 공통으로 사용하는 OpenSearch Appender 라이브러리.  
 PyPI에 배포되지 않으므로 **개발자 로컬 환경에 직접 설치**해야 한다.  
 설치 후 각 Python 앱이 일반 패키지처럼 `import` 할 수 있다.
 
-`bulk-only` 변형은 import 패키지명과 클래스명을 기존과 동일하게 유지하되 `_bulk` 작업을 `index` / `create` 액션으로만 제한하고, 응답 item별 partial failure 분석, retry, 재큐 설정을 지원한다.
+`bulk` 변형은 import 패키지명과 클래스명을 기존과 동일하게 유지하되 `_bulk` 작업을 `index` / `create` 액션으로만 제한하고, 응답 item별 partial failure 분석, retry, 재큐 설정을 지원한다.
 
 #### 설치 방법
 
-각 Python 소비 앱의 `requirements.txt` 에 `../lib/simple-lib-python-opensearch-appender-bulk-only-3.0.0` 가 포함되어 있으므로  
+각 Python 소비 앱의 `requirements.txt` 에 `../lib/simple-lib-python-opensearch-appender-bulk-3.0.0` 가 포함되어 있으므로  
 **별도 설치 없이** 앱 디렉터리에서 `pip install -r requirements.txt` 하나로 완결된다.
 
 ```bash
@@ -196,7 +196,7 @@ from opensearch_appender.web_appender_fastapi import OpenSearchAppender
 
 ```bash
 # 각 소비 앱 가상환경에서 재설치
-pip install --force-reinstall ../lib/simple-lib-python-opensearch-appender-bulk-only-3.0.0
+pip install --force-reinstall ../lib/simple-lib-python-opensearch-appender-bulk-3.0.0
 ```
 
 ---
@@ -206,7 +206,7 @@ pip install --force-reinstall ../lib/simple-lib-python-opensearch-appender-bulk-
 | 디렉터리 | 내장 라이브러리 | 내장 패키지 |
 |---|---|---|
 | `simple-jobs-spring-maven-full` | `lib/simple-lib-spring-opensearch-appender-3.0.0` (full) | `com.cube.simple.opensearch` |
-| `simple-jobs-spring-maven-bulk` | `lib/simple-lib-spring-opensearch-appender-bulk-only-3.0.0` (bulk-only) | `com.cube.simple.opensearch` |
+| `simple-jobs-spring-maven-bulk` | `lib/simple-lib-spring-opensearch-appender-bulk-3.0.0` (bulk) | `com.cube.simple.opensearch` |
 
 공용 라이브러리를 로컬 `.m2`에 설치하지 않고도 바로 빌드·실행할 수 있는 **소스 내장 변형** 프로젝트.  
 `lib/` 라이브러리 소스를 `com.cube.simple.opensearch` 패키지로 프로젝트에 직접 포함하여 `pom.xml` 외부 의존성 선언이 없어도 동작한다.  
@@ -214,7 +214,7 @@ pip install --force-reinstall ../lib/simple-lib-python-opensearch-appender-bulk-
 
 | 항목 | `simple-jobs-spring-maven-full` | `simple-jobs-spring-maven-bulk` |
 |---|---|---|
-| 기반 라이브러리 | `simple-lib-spring-opensearch-appender-3.0.0` | `simple-lib-spring-opensearch-appender-bulk-only-3.0.0` |
+| 기반 라이브러리 | `simple-lib-spring-opensearch-appender-3.0.0` | `simple-lib-spring-opensearch-appender-bulk-3.0.0` |
 | 기본 `operation` | `index` | `index` |
 | 기본 `persistentWriterThread` | `false` | `true` |
 | `requeueOnFailure` | 미지원 | `true` (기본) |
@@ -250,7 +250,7 @@ npm run dev          # 개발 서버
 | `simple-jobs-spring-maven-with-mdc`  | Spring Boot 3.5 + MDC 예제 | - | Maven |
 | `simple-jobs-spring-gradle-with-mdc` | Spring Boot 3.5 + MDC 예제 | - | Gradle |
 | `simple-jobs-spring-maven-full`  | Spring Boot 3.5 + 라이브러리 소스 내장 (full, 로컬 설치 불필요) | - | Maven |
-| `simple-jobs-spring-maven-bulk`  | Spring Boot 3.5 + 라이브러리 소스 내장 (bulk-only, 로컬 설치 불필요) | - | Maven |
+| `simple-jobs-spring-maven-bulk`  | Spring Boot 3.5 + 라이브러리 소스 내장 (bulk, 로컬 설치 불필요) | - | Maven |
 | `simple-jobs-spring-maven-with-java8`  | Spring Boot + Java 8 호환 + Vision AI MDC (`DemoScheduleService`) | 9020 | Maven |
 | `simple-jobs-spring-maven-with-java11` | Spring Boot + Java 11 호환 + Vision AI MDC (`DemoScheduleService`) | 9021 | Maven |
 | `simple-jobs-spring-maven-with-java17` | Spring Boot + Java 17 호환 + Vision AI MDC (`DemoScheduleService`) | 9022 | Maven |
@@ -271,7 +271,7 @@ npm run dev          # 개발 서버
 
 ```bash
 # 공통 라이브러리 재설치가 필요한 경우 먼저 수행
-cd lib/simple-lib-spring-opensearch-appender-bulk-only-1.0.0
+cd lib/simple-lib-spring-opensearch-appender-bulk-1.0.0
 ../../simple-jobs-spring-maven/mvnw install -q -Dgpg.skip
 
 # Maven
@@ -299,7 +299,7 @@ cd simple-jobs-spring-maven-full
 cp src/main/resources/application-example.properties src/main/resources/application.properties
 ./mvnw spring-boot:run
 
-# Maven + 소스 내장 bulk-only (로컬 .m2 설치 불필요)
+# Maven + 소스 내장 bulk (로컬 .m2 설치 불필요)
 cd simple-jobs-spring-maven-bulk
 cp src/main/resources/application-example.properties src/main/resources/application.properties
 ./mvnw spring-boot:run
@@ -316,8 +316,8 @@ cd simple-jobs-spring-maven-with-java25  && cp src/main/resources/application-ex
 
 Spring 배치 앱에 MDC를 얹어 OpenSearch로 함께 적재하려면 아래 순서로 진행합니다.
 
-1. `lib/simple-lib-spring-opensearch-appender-bulk-only-1.0.0` 를 로컬 `.m2` 에 설치합니다.
-2. 소비 앱 `pom.xml` 또는 `build.gradle` 에 `com.agido:simple-lib-spring-opensearch-appender-bulk-only:1.0.0` 의존성을 둡니다.
+1. `lib/simple-lib-spring-opensearch-appender-bulk-1.0.0` 를 로컬 `.m2` 에 설치합니다.
+2. 소비 앱 `pom.xml` 또는 `build.gradle` 에 `com.agido:simple-lib-spring-opensearch-appender-bulk:1.0.0` 의존성을 둡니다.
 3. `application-example.properties` 를 `application.properties` 로 복사합니다.
 4. `logback-spring.xml` 에 `OpenSearchAppender` 를 등록하고 `includeMdc=true`, `includeKvp=true`, `operation=index` 같은 값을 설정합니다.
 5. 배치 코드에서 `MDC.put("traceId", ...)`, `MDC.put("jobName", ...)` 식으로 커스텀 필드를 넣고, 로그 출력 후 `MDC.clear()` 로 정리합니다.
@@ -362,7 +362,7 @@ npm install && npm run start:dev
 # Flask + APScheduler
 cd simple-jobs-python-flask
 python -m venv venv && source venv/bin/activate   # Windows: venv\Scripts\activate
-pip install -r requirements.txt                   # ../lib/simple-lib-python-opensearch-appender-bulk-only-3.0.0 포함
+pip install -r requirements.txt                   # ../lib/simple-lib-python-opensearch-appender-bulk-3.0.0 포함
 python main.py
 
 # FastAPI + APScheduler
@@ -432,7 +432,7 @@ npm install && npm start
 # Flask / waitress (포트 5201)
 cd simple-rest-python-flask
 python -m venv venv && source venv/bin/activate
-pip install -r requirements.txt                   # ../lib/simple-lib-python-opensearch-appender-bulk-only-3.0.0 포함
+pip install -r requirements.txt                   # ../lib/simple-lib-python-opensearch-appender-bulk-3.0.0 포함
 python main.py
 
 # FastAPI / uvicorn (포트 5202)
@@ -453,14 +453,14 @@ python main.py
 
 | 앱 유형 | 기술 스택 | Appender 파일 |
 |---|---|---|
-| 배치잡 | Spring Boot | `lib/simple-lib-spring-opensearch-appender-bulk-only-1.0.0/.../OpenSearchAppender.java` |
-| REST API | Spring Boot | `lib/simple-lib-spring-opensearch-appender-bulk-only-1.0.0/.../OpenSearchAppender.java` |
+| 배치잡 | Spring Boot | `lib/simple-lib-spring-opensearch-appender-bulk-1.0.0/.../OpenSearchAppender.java` |
+| REST API | Spring Boot | `lib/simple-lib-spring-opensearch-appender-bulk-1.0.0/.../OpenSearchAppender.java` |
 | 배치잡 | Node.js | `src/opensearch-job-appender.js` (또는 `.ts`) |
 | REST API | Node.js | `src/opensearch-web-appender.js` (또는 `.ts`) |
 | 프런트 | React / Next.js | `simple-page-react-nextjs/lib/opensearch-web-appender.js` |
-| 배치잡 | Python | `lib/simple-lib-python-opensearch-appender-bulk-only-3.0.0/opensearch_appender/job_appender.py` |
-| REST API (Flask) | Python | `lib/simple-lib-python-opensearch-appender-bulk-only-3.0.0/opensearch_appender/web_appender_flask.py` |
-| REST API (FastAPI) | Python | `lib/simple-lib-python-opensearch-appender-bulk-only-3.0.0/opensearch_appender/web_appender_fastapi.py` |
+| 배치잡 | Python | `lib/simple-lib-python-opensearch-appender-bulk-3.0.0/opensearch_appender/job_appender.py` |
+| REST API (Flask) | Python | `lib/simple-lib-python-opensearch-appender-bulk-3.0.0/opensearch_appender/web_appender_flask.py` |
+| REST API (FastAPI) | Python | `lib/simple-lib-python-opensearch-appender-bulk-3.0.0/opensearch_appender/web_appender_fastapi.py` |
 
 ### 2-2. Spring OpenSearchAppender 운용 방식
 
@@ -473,10 +473,10 @@ python main.py
 
 ### 2-3. Spring Boot — 설정 방법
 
-**① `lib/simple-lib-spring-opensearch-appender-bulk-only-1.0.0` 로컬 설치 (최초 1회)**
+**① `lib/simple-lib-spring-opensearch-appender-bulk-1.0.0` 로컬 설치 (최초 1회)**
 
 ```bash
-cd lib/simple-lib-spring-opensearch-appender-bulk-only-1.0.0
+cd lib/simple-lib-spring-opensearch-appender-bulk-1.0.0
 ../../simple-jobs-spring-maven/mvnw install -q -Dgpg.skip
 ```
 
@@ -486,7 +486,7 @@ Maven (`pom.xml`)
 ```xml
 <dependency>
     <groupId>com.agido</groupId>
-    <artifactId>simple-lib-spring-opensearch-appender-bulk-only</artifactId>
+    <artifactId>simple-lib-spring-opensearch-appender-bulk</artifactId>
     <version>1.0.0</version>
 </dependency>
 ```
@@ -495,7 +495,7 @@ Gradle (`build.gradle`)
 ```gradle
 repositories { mavenLocal(); mavenCentral() }
 dependencies {
-    implementation 'com.agido:simple-lib-spring-opensearch-appender-bulk-only:1.0.0'
+    implementation 'com.agido:simple-lib-spring-opensearch-appender-bulk:1.0.0'
 }
 ```
 
@@ -678,7 +678,7 @@ export class OpenSearchAppender {
 
 ### 2-5. Python — 설정 방법
 
-**① `lib/simple-lib-python-opensearch-appender-bulk-only-3.0.0` 설치 (최초 1회)**
+**① `lib/simple-lib-python-opensearch-appender-bulk-3.0.0` 설치 (최초 1회)**
 
 ```bash
 # 앱 디렉터리에서 실행 (requirements.txt에 경로 포함되어 있으므로 한 번에 설치됨)
@@ -686,7 +686,7 @@ cd simple-rest-python-flask
 pip install -r requirements.txt
 ```
 
-> `requirements.txt` 에 `../lib/simple-lib-python-opensearch-appender-bulk-only-3.0.0` 가 포함되어 있어  
+> `requirements.txt` 에 `../lib/simple-lib-python-opensearch-appender-bulk-3.0.0` 가 포함되어 있어  
 > 별도 설치 없이 `pip install -r requirements.txt` 하나로 완결된다.
 
 **② `.env`**

@@ -7,7 +7,7 @@ import threading
 import time
 from datetime import datetime, timezone, timedelta
 
-from .bulk_sender import BulkOnlySender
+from .bulk_sender import BulkSender
 
 KST = timezone(timedelta(hours=9), 'KST')
 
@@ -42,7 +42,7 @@ class OpenSearchJobAppender:
         self._requeue_on_failure = requeue_on_failure
         self._queue       = queue.Queue(maxsize=queue_size)
         self._retry       = []  # 전송 실패 항목 — 다음 _flush() 에서 우선 처리
-        self._sender      = BulkOnlySender(
+        self._sender      = BulkSender(
             url=url,
             username=username,
             password=password,

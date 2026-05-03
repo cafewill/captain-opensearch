@@ -5,7 +5,7 @@
 	<modelVersion>4.0.0</modelVersion>
 
 	<groupId>com.agido</groupId>
-	<artifactId>simple-lib-spring-opensearch-appender-bulk-only</artifactId>
+	<artifactId>simple-lib-spring-opensearch-appender-bulk</artifactId>
 	<version>1.0.0</version>
 	<packaging>jar</packaging>
 

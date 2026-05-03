@@ -12,7 +12,7 @@ class BulkSendResult:
         self.message = message
 
 
-class BulkOnlySender:
+class BulkSender:
     def __init__(
         self,
         url,
